@@ -1,37 +1,49 @@
 #!/usr/bin/env bash
 # Запуск бэкенда (FastAPI :8000) и фронта (Vite :5173) одной командой.
-# Работает в macOS/Linux и Git Bash на Windows.
-set -e
+# Работает в macOS/Linux и Git Bash на Windows (из PowerShell: .\run.ps1).
+#
+#   ./run.sh           — запуск, открывает браузер
+#   ./run.sh --reset   — то же, но БД пересоздаётся с тестовыми данными (перед демо)
+#   NO_OPEN=1 ./run.sh — не открывать браузер
 cd "$(dirname "$0")"
+source scripts/common.sh
 
-PY=$(command -v python3 || command -v python)
+API_PORT=8000
+WEB_PORT=5173
 
-if [ ! -d backend/.venv ]; then
-  echo "→ Создаю виртуальное окружение"
-  "$PY" -m venv backend/.venv
+if port_busy $WEB_PORT && port_busy $API_PORT; then
+  green "Приложение уже запущено"
+  print_links $WEB_PORT $API_PORT " · остановить: закройте окно, где оно запущено"
+  open_url "http://localhost:$WEB_PORT/"
+  exit 0
 fi
-if [ -f backend/.venv/Scripts/python.exe ]; then
-  VPY=backend/.venv/Scripts/python.exe
-else
-  VPY=backend/.venv/bin/python
-fi
 
-echo "→ Устанавливаю зависимости бэкенда"
-"$VPY" -m pip install -q -r backend/requirements.txt
-
-if [ ! -d node_modules ]; then
-  echo "→ Устанавливаю зависимости фронта"
-  npm install
-fi
+step "Зависимости"
+setup_backend || exit 1
+setup_frontend || exit 1
 
 if [ "$1" = "--reset" ]; then
-  (cd backend && "../$VPY" -m app.seed --reset)
+  step "Сброс БД к тестовым данным"
+  (cd backend && "$VPY" -m app.seed --reset)
 fi
 
-(cd backend && "../$VPY" -m uvicorn app.main:app --reload --port 8000) &
-BACK=$!
-trap 'kill $BACK 2>/dev/null' EXIT
+stop() {
+  echo
+  echo "Останавливаю…"
+  kill $(jobs -p) 2>/dev/null
+  kill_port $API_PORT
+  kill_port $WEB_PORT
+}
+trap stop EXIT
+trap "exit 130" INT TERM
 
-echo "→ API:     http://localhost:8000/docs"
-echo "→ Фронт:   http://localhost:5173"
-npm run dev
+step "Запуск"
+(cd backend && "$VPY" -m uvicorn app.main:app --reload --port $API_PORT --log-level warning) &
+node node_modules/vite/bin/vite.js --port $WEB_PORT --strictPort --logLevel warn &
+
+wait_for "http://localhost:$API_PORT/api/health" 40 "API" || exit 1
+wait_for "http://localhost:$WEB_PORT" 40 "фронт" || exit 1
+
+print_links $WEB_PORT $API_PORT
+open_url "http://localhost:$WEB_PORT/"
+wait
