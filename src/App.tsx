@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Role = "business" | "team";
 
@@ -15,6 +15,22 @@ const Check = () => (
 );
 
 function App() {
+  const [visible, setVisible] = useState<Record<string, boolean>>({});
+  const revealRefs = useRef<(HTMLElement | null)[]>([]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) setVisible((prev) => ({ ...prev, [entry.target.id]: true }));
+      });
+    }, { threshold: 0.12 });
+    revealRefs.current.forEach((el) => el && observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  const reveal = (id: string) => (el: HTMLElement | null) => {
+    if (el && !revealRefs.current.includes(el)) revealRefs.current.push(el);
+  };
   const [role, setRole] = useState<Role>("business");
 
   const scrollTo = (id: string) => {
@@ -47,11 +63,11 @@ function App() {
       </header>
 
       <main id="top">
-        <section className="hero">
+        <section className="hero" id="hero">
           <div className="hero-glow glow-one" />
           <div className="hero-glow glow-two" />
-          <div className="hero-content">
-            <div className="eyebrow"><span className="pulse" /> AI-powered challenge builder</div>
+          <div className="hero-content reveal reveal-left">
+            <div className="eyebrow"><span className="pulse" /> AI-powered challenge builder</div><div className="hero-grid-lines" aria-hidden="true" />
             <h1>Turn business problems into <span>real challenges.</span></h1>
             <p className="hero-copy">
               AI SANA helps businesses structure a real problem, measure challenge readiness,
@@ -67,7 +83,7 @@ function App() {
             </div>
           </div>
 
-          <div className="hero-visual" aria-label="Challenge readiness preview">
+          <div className="hero-visual float-card reveal reveal-right" aria-label="Challenge readiness preview">
             <div className="visual-top">
               <span>Challenge readiness</span>
               <span className="live-dot">● Live</span>
@@ -76,7 +92,7 @@ function App() {
               <div className="ring-inner"><strong>82</strong><span>/ 100</span><small>READY</small></div>
             </div>
             <div className="score-caption"><strong>Strong challenge</strong><span>AI analysis is complete</span></div>
-            <div className="field-list">
+            <div className="field-list animated-list">
               <div><span className="check"><Check /></span><div><b>Problem</b><small>Clearly defined</small></div><em>20/20</em></div>
               <div><span className="check"><Check /></span><div><b>Target users</b><small>Evidence added</small></div><em>15/15</em></div>
               <div><span className="check"><Check /></span><div><b>Success metric</b><small>Needs refinement</small></div><em>12/20</em></div>
@@ -86,19 +102,19 @@ function App() {
           </div>
         </section>
 
-        <section className="stats">
+        <section className={`ats reveal ${visible.stats ? "is-visible" : ""}`} ref={reveal("stats")} id="stats">
           <div><strong>10</strong><span>structured fields</span></div>
           <div><strong>0–100</strong><span>readiness score</span></div>
           <div><strong>3+</strong><span>AI clarification questions</span></div>
           <div><strong>1</strong><span>real path to a team</span></div>
         </section>
 
-        <section className="section" id="features">
+        <section className={`ction reveal ${visible.features ? "is-visible" : ""}`} ref={reveal("features")} id="features">
           <div className="section-heading">
             <div><span className="section-kicker">WHY AI SANA</span><h2>Less vague ideas.<br/><span>More buildable challenges.</span></h2></div>
             <p>The platform turns an unstructured business problem into a transparent, human-confirmed challenge card.</p>
           </div>
-          <div className="feature-grid">
+          <div className="feature-grid stagger">
             <article className="feature-card featured">
               <div className="feature-icon"><Spark /></div>
               <span>01</span><h3>AI clarification</h3>
@@ -120,11 +136,11 @@ function App() {
           </div>
         </section>
 
-        <section className="workflow section" id="how">
+        <section className={`rkflow section reveal ${visible.how ? "is-visible" : ""}`} ref={reveal("how")} id="how">
           <div className="section-heading compact">
             <div><span className="section-kicker">HOW IT WORKS</span><h2>From problem to <span>action.</span></h2></div>
           </div>
-          <div className="steps">
+          <div className="steps stagger">
             <div className="step"><b>01</b><div><h3>Describe</h3><p>Business explains the problem in plain language.</p></div></div>
             <div className="step"><b>02</b><div><h3>Clarify</h3><p>AI asks at least three questions and builds the card.</p></div></div>
             <div className="step"><b>03</b><div><h3>Confirm</h3><p>Business edits, validates and publishes the challenge.</p></div></div>
@@ -132,7 +148,7 @@ function App() {
           </div>
         </section>
 
-        <section className="explore section" id="explore">
+        <section className={`plore section reveal ${visible.explore ? "is-visible" : ""}`} ref={reveal("explore")} id="explore">
           <div className="explore-card">
             <div><span className="section-kicker">LIVE CATALOG</span><h2>Find a challenge worth building.</h2><p>Browse by topic, readiness and status. Every published challenge is confirmed by its business owner.</p></div>
             <div className="challenge-preview">
@@ -141,7 +157,7 @@ function App() {
           </div>
         </section>
 
-        <section className="create-section" id="create">
+        <section className={`eate-section reveal ${visible.create ? "is-visible" : ""}`} ref={reveal("create")} id="create">
           <div className="create-card">
             <div className="eyebrow"><span className="pulse" /> {role === "business" ? "Business mode" : "Team mode"}</div>
             <h2>{role === "business" ? "Have a real problem?" : "Ready to build something real?"}</h2>
