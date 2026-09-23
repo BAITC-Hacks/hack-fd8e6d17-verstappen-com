@@ -105,7 +105,7 @@ def catalog_sort_key(t: TaskOut):
     """Правила каталога:
     1) закрытые задачи — в конце;
     2) выше рейтинг — выше позиция;
-    3) при равном рейтинге — меньше откликов (даём шанс задачам без внимания);
-    4) затем более свежие.
+    3) при равном рейтинге — более свежие задачи;
+    4) затем меньше откликов (даём шанс задачам без внимания).
     """
-    return (t.status == "closed", -t.score, t.proposals_count, -t.created_at.timestamp())
+    return (t.status == "closed", -t.score, -t.created_at.timestamp(), t.proposals_count)
