@@ -131,3 +131,54 @@
   .tm-points{text-align:left}
   .tm-drawer{padding:24px 16px 50px}
 }
+
+/* AI Sana marketplace catalog */
+.catalog-page{padding-top:8px}
+.catalog-hero{display:grid;grid-template-columns:1fr 220px;gap:24px;align-items:stretch;margin-bottom:18px;padding:28px;border:1px solid rgba(49,133,252,.18);border-radius:22px;background:radial-gradient(circle at 80% 20%,rgba(49,133,252,.18),transparent 35%),linear-gradient(145deg,#171a21,#12151b)}
+.catalog-hero h1{font-family:'Space Grotesk';font-size:42px;line-height:1.05;letter-spacing:-1.8px;margin:9px 0 10px;max-width:720px}
+.catalog-hero h1 span{color:var(--tm-accent)}
+.catalog-hero-badge{display:grid;align-content:center;text-align:center;border:1px solid var(--tm-line);border-radius:18px;background:rgba(255,255,255,.025);padding:18px}
+.catalog-hero-badge span{font-size:9px;letter-spacing:1.5px;color:var(--tm-muted);font-weight:700}
+.catalog-hero-badge strong{font-family:'Space Grotesk';font-size:48px;line-height:1;margin:7px 0;color:var(--tm-text)}
+.catalog-hero-badge small{font-size:11px;color:var(--tm-muted)}
+.catalog-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.catalog-stats>div{padding:15px 17px;border:1px solid var(--tm-line);border-radius:14px;background:var(--tm-surface)}
+.catalog-stats span{display:block;font-size:10px;color:var(--tm-muted);margin-bottom:5px}
+.catalog-stats strong{font-family:'Space Grotesk';font-size:24px}
+.catalog-stats strong small{font-family:inherit;font-size:11px;color:var(--tm-muted);margin-left:2px}
+.catalog-toolbar{display:flex;gap:9px;align-items:center;margin-bottom:9px}
+.catalog-search-wrap{display:flex;align-items:center;gap:7px;flex:1;background:var(--tm-surface);border:1px solid var(--tm-line);border-radius:10px;padding:0 10px}
+.catalog-search-wrap>span{font-size:20px;color:var(--tm-muted)}
+.catalog-search-wrap .tm-search{border:0;background:transparent;padding-left:2px}
+.catalog-search-wrap .tm-search:focus{outline:0}
+.catalog-clear-search{background:none;color:var(--tm-muted);font-size:18px;padding:2px 4px}
+.catalog-toolbar select{min-width:135px}
+.catalog-filter-toggle{height:36px;padding:0 12px;border-radius:9px;border:1px solid var(--tm-line);background:var(--tm-surface);color:var(--tm-muted);font-size:12px}
+.catalog-filter-toggle:hover{border-color:rgba(49,133,252,.5);color:var(--tm-text)}
+.catalog-subtoolbar{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:20px}
+.catalog-filter-meta{display:flex;gap:10px;align-items:center;font-size:11px;color:var(--tm-muted)}
+.catalog-filter-meta button{background:none;color:var(--tm-accent);font-size:11px;padding:0}
+.catalog-loading{display:flex;align-items:center;justify-content:center;gap:12px;min-height:180px;color:var(--tm-muted);font-size:13px}
+.catalog-error{display:flex;justify-content:space-between;gap:20px;align-items:center;margin:15px 0;padding:16px 18px;border:1px solid rgba(240,106,106,.25);border-radius:14px;background:rgba(240,106,106,.07)}
+.catalog-error>div{display:grid;gap:4px}
+.catalog-error strong{color:var(--tm-red);font-size:13px}
+.catalog-error span{font-size:12px;color:var(--tm-text)}
+.catalog-error small{font-size:11px;color:var(--tm-muted)}
+.catalog-error button{background:var(--tm-surface);border:1px solid var(--tm-line);color:var(--tm-text);border-radius:8px;padding:8px 12px;font-size:12px}
+.catalog-empty{display:grid;gap:7px;justify-items:center}
+.catalog-empty strong{font-family:'Space Grotesk';font-size:16px;color:var(--tm-text)}
+.catalog-empty span{font-size:12px}
+.catalog-empty button{margin-top:5px;background:var(--tm-accent);color:#111318;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700}
+.catalog-grid .tm-card{min-height:210px}
+.catalog-grid .tm-card-body>div:first-child{min-width:0}
+@media(max-width:860px){
+  .catalog-hero{grid-template-columns:1fr;padding:22px}
+  .catalog-hero h1{font-size:32px}
+  .catalog-hero-badge{grid-template-columns:auto auto auto;gap:8px;text-align:left;align-items:center}
+  .catalog-hero-badge strong{font-size:30px;margin:0}
+  .catalog-stats{grid-template-columns:repeat(2,1fr)}
+  .catalog-toolbar{flex-wrap:wrap}
+  .catalog-search-wrap{flex-basis:100%}
+  .catalog-subtoolbar{align-items:flex-start;flex-direction:column}
+  .catalog-filter-meta{width:100%;justify-content:space-between}
+}
