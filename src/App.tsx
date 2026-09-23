@@ -102,14 +102,14 @@ function App() {
           </div>
         </section>
 
-        <section className="stats reveal" ref={reveal("stats")} id="stats">
+        <section className={`ats reveal ${visible.stats ? "is-visible" : ""}`} ref={reveal("stats")} id="stats">
           <div><strong>10</strong><span>structured fields</span></div>
           <div><strong>0–100</strong><span>readiness score</span></div>
           <div><strong>3+</strong><span>AI clarification questions</span></div>
           <div><strong>1</strong><span>real path to a team</span></div>
         </section>
 
-        <section className="section reveal" ref={reveal("features")} id="features">
+        <section className={`ction reveal ${visible.features ? "is-visible" : ""}`} ref={reveal("features")} id="features">
           <div className="section-heading">
             <div><span className="section-kicker">WHY AI SANA</span><h2>Less vague ideas.<br/><span>More buildable challenges.</span></h2></div>
             <p>The platform turns an unstructured business problem into a transparent, human-confirmed challenge card.</p>
@@ -136,7 +136,7 @@ function App() {
           </div>
         </section>
 
-        <section className="workflow section reveal" ref={reveal("how")} id="how">
+        <section className={`rkflow section reveal ${visible.how ? "is-visible" : ""}`} ref={reveal("how")} id="how">
           <div className="section-heading compact">
             <div><span className="section-kicker">HOW IT WORKS</span><h2>From problem to <span>action.</span></h2></div>
           </div>
@@ -148,7 +148,7 @@ function App() {
           </div>
         </section>
 
-        <section className="explore section reveal" ref={reveal("explore")} id="explore">
+        <section className={`plore section reveal ${visible.explore ? "is-visible" : ""}`} ref={reveal("explore")} id="explore">
           <div className="explore-card">
             <div><span className="section-kicker">LIVE CATALOG</span><h2>Find a challenge worth building.</h2><p>Browse by topic, readiness and status. Every published challenge is confirmed by its business owner.</p></div>
             <div className="challenge-preview">
@@ -157,7 +157,7 @@ function App() {
           </div>
         </section>
 
-        <section className="create-section reveal" ref={reveal("create")} id="create">
+        <section className={`eate-section reveal ${visible.create ? "is-visible" : ""}`} ref={reveal("create")} id="create">
           <div className="create-card">
             <div className="eyebrow"><span className="pulse" /> {role === "business" ? "Business mode" : "Team mode"}</div>
             <h2>{role === "business" ? "Have a real problem?" : "Ready to build something real?"}</h2>
