@@ -23,7 +23,14 @@ docker compose up --build
 - API и Swagger: http://localhost:8000/docs
 - Ключ ИИ: скопируйте `.env.example` в `backend/.env`. Без ключа работает заглушка (`AI_MODE=mock`).
 
-Тесты бэкенда:
+**Проверить всё одной командой** (зависимости, тесты, сборка, смоук-тест сценария на изолированной копии с временной БД):
+
+```bash
+./check.sh           # полная проверка, ~30 секунд
+./check.sh --quick   # без запуска серверов
+```
+
+Только тесты бэкенда:
 
 ```bash
 cd backend && .venv/Scripts/python -m pytest   # Windows
