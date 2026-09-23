@@ -31,7 +31,7 @@ cleanup() {
     kill_port $API_PORT
     kill_port $WEB_PORT
   fi
-  rm -rf "$LOG_DIR"
+  if [ -n "$KEEP_LOGS" ]; then echo "Логи сохранены: $LOG_DIR"; else rm -rf "$LOG_DIR"; fi
 }
 trap cleanup EXIT
 
@@ -52,7 +52,7 @@ record $? "Тесты бэкенда"
 step "Проверка типов и сборка фронта"
 npm run build --silent >"$LOG_DIR/build.log" 2>&1
 code=$?
-if [ $code -eq 0 ]; then green "  сборка прошла"; else tail -n 30 "$LOG_DIR/build.log"; fi
+if [ $code -eq 0 ]; then green "  сборка прошла"; else tail -n 30 "$LOG_DIR/build.log"; KEEP_LOGS=1; fi
 record $code "Сборка фронта (tsc + vite build)"
 
 # ---------- 4. Смоук-тест на изолированной копии ----------
@@ -63,15 +63,17 @@ if [ "$1" != "--quick" ]; then
     record 1 "Смоук-тест (порты заняты)"
   else
     STARTED=1
-    (cd backend && DATABASE_URL="sqlite:///$TMP_DB" "$VPY" -m uvicorn app.main:app --port $API_PORT >"$LOG_DIR/api.log" 2>&1) &
-    API_URL="http://localhost:$API_PORT" node node_modules/vite/bin/vite.js --port $WEB_PORT --strictPort >"$LOG_DIR/web.log" 2>&1 &
+    (cd backend && DATABASE_URL="sqlite:///$TMP_DB" exec "$VPY" -m uvicorn app.main:app --host $HOST --port $API_PORT >"$LOG_DIR/api.log" 2>&1) &
+    API_PID=$!
+    API_URL="http://$HOST:$API_PORT" node node_modules/vite/bin/vite.js --host $HOST --port $WEB_PORT --strictPort >"$LOG_DIR/web.log" 2>&1 &
+    WEB_PID=$!
 
-    if wait_for "http://localhost:$API_PORT/api/health" 40 "API" && wait_for "http://localhost:$WEB_PORT" 40 "фронт"; then
-      "$VPY" backend/tests/smoke.py "http://localhost:$WEB_PORT"
+    if wait_for "http://$HOST:$API_PORT/api/health" 60 "API" $API_PID "$LOG_DIR/api.log" &&
+       wait_for "http://$HOST:$WEB_PORT" 60 "фронт" $WEB_PID "$LOG_DIR/web.log"; then
+      "$VPY" backend/tests/smoke.py "http://$HOST:$WEB_PORT"
       record $? "Смоук-тест: черновик → рейтинг → каталог → отклик → выбор → этап"
     else
-      red "  Серверы не поднялись. Логи:"
-      tail -n 20 "$LOG_DIR/api.log" "$LOG_DIR/web.log"
+      KEEP_LOGS=1
       record 1 "Запуск серверов"
     fi
     kill $(jobs -p) 2>/dev/null

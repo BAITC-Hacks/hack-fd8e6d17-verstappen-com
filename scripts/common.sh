@@ -40,20 +40,32 @@ setup_frontend() {
   fi
 }
 
-port_busy() { curl -s -o /dev/null --max-time 2 "http://localhost:$1" 2>/dev/null; }
+# Серверы слушают 127.0.0.1 явно: на Windows «localhost» может резолвиться в IPv6 ::1,
+# и тогда сервер и проверка «не видят» друг друга.
+HOST=127.0.0.1
 
-# wait_for <url> <секунд> <название> — ждёт с индикатором прогресса
+port_busy() { curl -s -o /dev/null --max-time 2 "http://$HOST:$1" 2>/dev/null; }
+
+# wait_for <url> <секунд> <название> [pid] [лог]
+# Ждёт ответа с индикатором. Если процесс pid умер — сразу показывает лог и выходит.
 wait_for() {
   printf '  жду %s ' "$3"
-  for _ in $(seq 1 "$2"); do
-    if curl -sf --max-time 2 "$1" >/dev/null 2>&1; then
-      green "готово"
+  local start=$SECONDS
+  while [ $((SECONDS - start)) -lt "$2" ]; do
+    if curl -sf --max-time 3 "$1" >/dev/null 2>&1; then
+      green "готово ($((SECONDS - start)) сек)"
       return 0
+    fi
+    if [ -n "$4" ] && ! kill -0 "$4" 2>/dev/null; then
+      red " процесс завершился с ошибкой"
+      [ -n "$5" ] && [ -f "$5" ] && { echo "  --- лог ($5) ---"; tail -n 25 "$5" | sed 's/^/  /'; }
+      return 1
     fi
     printf '.'
     sleep 1
   done
   red " не ответил за $2 сек"
+  [ -n "$5" ] && [ -f "$5" ] && { echo "  --- лог ($5) ---"; tail -n 25 "$5" | sed 's/^/  /'; }
   return 1
 }
 
@@ -88,10 +100,10 @@ open_url() {
 print_links() { # print_links <порт фронта> <порт API> [хвост подсказки]
   echo
   bold "  ┌─ Приложение запущено ─────────────────────────────"
-  echo "  │  Лендинг:        http://localhost:$1/"
-  echo "  │  Команда:        http://localhost:$1/#/team"
-  echo "  │  Бизнес:         http://localhost:$1/#/business"
-  echo "  │  API (Swagger):  http://localhost:$2/docs"
+  echo "  │  Лендинг:        http://$HOST:$1/"
+  echo "  │  Команда:        http://$HOST:$1/#/team"
+  echo "  │  Бизнес:         http://$HOST:$1/#/business"
+  echo "  │  API (Swagger):  http://$HOST:$2/docs"
   bold "  └─ Ctrl+ЛКМ по ссылке — открыть${3:- · Ctrl+C — остановить}"
   echo
 }

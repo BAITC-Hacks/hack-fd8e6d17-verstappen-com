@@ -14,7 +14,7 @@ WEB_PORT=5173
 if port_busy $WEB_PORT && port_busy $API_PORT; then
   green "Приложение уже запущено"
   print_links $WEB_PORT $API_PORT " · остановить: закройте окно, где оно запущено"
-  open_url "http://localhost:$WEB_PORT/"
+  open_url "http://$HOST:$WEB_PORT/"
   exit 0
 fi
 
@@ -38,12 +38,14 @@ trap stop EXIT
 trap "exit 130" INT TERM
 
 step "Запуск"
-(cd backend && "$VPY" -m uvicorn app.main:app --reload --port $API_PORT --log-level warning) &
-node node_modules/vite/bin/vite.js --port $WEB_PORT --strictPort --logLevel warn &
+(cd backend && exec "$VPY" -m uvicorn app.main:app --reload --host $HOST --port $API_PORT --log-level warning) &
+API_PID=$!
+API_URL="http://$HOST:$API_PORT" node node_modules/vite/bin/vite.js --host $HOST --port $WEB_PORT --strictPort --logLevel warn &
+WEB_PID=$!
 
-wait_for "http://localhost:$API_PORT/api/health" 40 "API" || exit 1
-wait_for "http://localhost:$WEB_PORT" 40 "фронт" || exit 1
+wait_for "http://$HOST:$API_PORT/api/health" 60 "API" $API_PID || exit 1
+wait_for "http://$HOST:$WEB_PORT" 60 "фронт" $WEB_PID || exit 1
 
 print_links $WEB_PORT $API_PORT
-open_url "http://localhost:$WEB_PORT/"
+open_url "http://$HOST:$WEB_PORT/"
 wait
