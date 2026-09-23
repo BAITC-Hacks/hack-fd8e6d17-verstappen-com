@@ -1,8 +1,9 @@
 import os
+import secrets
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
@@ -58,6 +59,11 @@ def demo_drafts():
 
 
 @app.post("/api/admin/reset", tags=["Служебное"], summary="Сбросить БД к тестовым данным (перед демо)")
-def admin_reset():
+def admin_reset(x_admin_token: str = Header("")):
+    # На публичном сервере задайте ADMIN_TOKEN — иначе любой сможет стереть базу.
+    token = os.getenv("ADMIN_TOKEN", "")
+    if token and not secrets.compare_digest(x_admin_token.encode(), token.encode()):
+        raise HTTPException(403, "Нужен заголовок X-Admin-Token")
     reset()
     return {"status": "reset"}
+

@@ -1,0 +1,7 @@
+# Зависимости Python-функции на Vercel (api/index.py). Для локальной разработки — backend/requirements.txt.
+fastapi==0.115.12
+sqlmodel==0.0.24
+pydantic==2.11.4
+python-dotenv==1.1.0
+openai==1.82.0
+psycopg[binary]==3.2.9
