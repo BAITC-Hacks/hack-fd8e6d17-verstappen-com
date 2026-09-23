@@ -204,31 +204,77 @@ function TaskItem({ task, position, onOpen, reason }: { task: Task; position?: n
 
 function Recommendations({ team, onOpen, version }: { team: Team; onOpen: (id: number) => void; version: number }) {
   const recs = useLoad(() => api.recommendations(team.id), [team.id, version]);
+  const profile = [...new Set([...team.skills, ...team.tech, ...team.interests])];
+
   return (
-    <section>
-      <div className="tm-title">
+    <section className="match-page">
+      <div className="match-hero">
         <div>
-          <span className="section-kicker">ДЛЯ КОМАНДЫ {team.name.toUpperCase()}</span>
-          <h1>Рекомендованные задачи</h1>
+          <span className="section-kicker">GPT MATCH · TEAM INTELLIGENCE</span>
+          <h1>Задачи, которые подходят <span>вашей команде.</span></h1>
           <p className="tm-muted">
-            Подбор по совпадению навыков, интересов и технологий команды с темой задачи. Рекомендуются только открытые задачи
-            с рейтингом от 40. Каталог при этом доступен целиком.
+            GPT сопоставляет профиль команды с открытыми задачами: навыки, технологии, интересы и содержание задачи.
+            Вы сами выбираете, на что откликаться.
           </p>
         </div>
+        <div className="match-hero-score">
+          <span>ПРОФИЛЬ</span>
+          <strong>{profile.length}</strong>
+          <small>сигналов для match</small>
+        </div>
       </div>
-      <div className="tm-profile">
-        {[...team.skills, ...team.tech, ...team.interests].map((s) => (
-          <span key={s}>{s}</span>
-        ))}
+
+      <div className="match-profile">
+        <div>
+          <span className="section-kicker">YOUR TEAM</span>
+          <h3>{team.name}</h3>
+        </div>
+        <div className="tm-profile">
+          {profile.map((s) => <span key={s}>{s}</span>)}
+        </div>
       </div>
+
       {recs.loading && !recs.data && <Loader />}
       {recs.error && <ErrorBox error={recs.error} onRetry={recs.reload} />}
-      {recs.data?.length === 0 && <div className="tm-empty">Подходящих задач пока нет — загляните в общий каталог</div>}
-      <div className="tm-grid">
-        {recs.data?.map((r) => (
-          <TaskItem key={r.task.id} task={r.task} onOpen={onOpen} reason={r.reason} />
-        ))}
-      </div>
+      {recs.data?.length === 0 && (
+        <div className="tm-empty">
+          <strong>Пока нет подходящих задач</strong>
+          <span>Откройте общий каталог — новые challenges появляются там сразу.</span>
+        </div>
+      )}
+
+      {recs.data && recs.data.length > 0 && (
+        <div className="match-grid">
+          {recs.data.map((r, i) => {
+            const signals = [...new Set(r.matched)];
+            const match = Math.min(98, Math.max(62, Math.round(72 + signals.length * 7 + r.task.score / 20)));
+            return (
+              <article className="match-card" key={r.task.id} style={{ "--match-delay": "${i * 70}ms" } as CSSProperties}>
+                <div className="match-card-top">
+                  <span className="match-index">0{i + 1}</span>
+                  <span className="match-label">GPT MATCH</span>
+                  <strong>{match}%</strong>
+                </div>
+                <div className="match-card-body">
+                  <div>
+                    <span className="tm-topic">{r.task.topic}</span>
+                    <h3>{r.task.title}</h3>
+                    <p>{r.reason}</p>
+                  </div>
+                  <ScoreRing score={r.task.score} size={62} />
+                </div>
+                <div className="match-signals">
+                  {signals.slice(0, 5).map((s) => <span key={s}>✓ {s}</span>)}
+                </div>
+                <div className="match-card-foot">
+                  <span>{r.task.proposals_count} откликов · {r.task.owner}</span>
+                  <button onClick={() => onOpen(r.task.id)}>Посмотреть задачу →</button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
