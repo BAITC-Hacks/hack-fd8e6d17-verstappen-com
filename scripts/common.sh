@@ -1,5 +1,8 @@
 # Общие функции для run.sh и check.sh (подключается через source).
 
+# Русский текст из Python в консоли Windows без кракозябр
+export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
+
 green() { printf '\033[32m%s\033[0m\n' "$*"; }
 red() { printf '\033[31m%s\033[0m\n' "$*"; }
 bold() { printf '\033[1m%s\033[0m\n' "$*"; }
@@ -83,6 +86,55 @@ kill_port() {
   elif command -v lsof >/dev/null; then
     lsof -ti "tcp:$1" -sTCP:LISTEN | xargs kill 2>/dev/null
   fi
+}
+
+tcp_open() { (echo >"/dev/tcp/$1/$2") >/dev/null 2>&1; }
+
+# Если в .env указан PostgreSQL на этой машине — поднимает его из docker-compose.yml.
+# При необходимости сам запускает Docker Desktop. Для SQLite ничего не делает.
+ensure_postgres() {
+  local url
+  url=${DATABASE_URL:-$(grep -E '^DATABASE_URL=' .env 2>/dev/null | tail -n 1 | cut -d= -f2- | tr -d "\"'\r")}
+  case "$url" in
+    postgresql*@localhost:*|postgresql*@127.0.0.1:*) ;;
+    *) return 0 ;;  # SQLite или внешний сервер
+  esac
+  # Порт открыт, а Docker не работает — значит, PostgreSQL установлен локально, его и используем.
+  # (Если Docker работает, идём через compose: порт контейнера открыт ещё до готовности БД.)
+  if tcp_open 127.0.0.1 5432 && ! docker info >/dev/null 2>&1; then
+    green "  PostgreSQL уже запущен"
+    return 0
+  fi
+  command -v docker >/dev/null || { red "  PostgreSQL не запущен, а Docker не установлен. Либо установите Docker Desktop, либо закомментируйте DATABASE_URL в .env (будет SQLite)"; return 1; }
+
+  if ! docker info >/dev/null 2>&1; then
+    local dd="/c/Program Files/Docker/Docker/Docker Desktop.exe"
+    if [ -f "$dd" ]; then
+      printf '  запускаю Docker Desktop '
+      "$dd" >/dev/null 2>&1 &
+      local start=$SECONDS
+      until docker info >/dev/null 2>&1; do
+        [ $((SECONDS - start)) -ge 120 ] && { red " не запустился за 2 минуты"; return 1; }
+        printf '.'
+        sleep 2
+      done
+      green "готово"
+    else
+      red "  Docker не запущен. Откройте Docker Desktop и повторите"
+      return 1
+    fi
+  fi
+
+  printf '  поднимаю PostgreSQL в Docker '
+  docker compose up -d db >/dev/null 2>&1 || { red "ошибка"; docker compose up -d db; return 1; }
+  local cid start=$SECONDS
+  cid=$(docker compose ps -q db)
+  until [ "$(docker inspect -f '{{.State.Health.Status}}' "$cid" 2>/dev/null)" = "healthy" ]; do
+    [ $((SECONDS - start)) -ge 60 ] && { red " не готов за 60 сек"; docker compose logs --tail 20 db; return 1; }
+    printf '.'
+    sleep 1
+  done
+  green "готово"
 }
 
 # Открывает ссылку в браузере по умолчанию. Отключить: NO_OPEN=1

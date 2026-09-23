@@ -1,15 +1,39 @@
+# Переменные берутся из .env в корне (см. .env.example).
+#   docker compose up -d db       — только PostgreSQL (так делает run.sh)
+#   docker compose up --build     — всё приложение в контейнерах
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-hacksana}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      # -h 127.0.0.1: при первом запуске образ поднимает временный сервер только на unix-сокете
+      # и потом перезапускается — по TCP проверка пройдёт лишь когда поднят настоящий сервер
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
   backend:
     build: ./backend
     ports:
       - "8000:8000"
     env_file:
-      - path: ./backend/.env
+      - path: ./.env
         required: false
     environment:
+      # внутри сети compose база доступна по имени сервиса, а не localhost
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-hacksana}
       CORS_ORIGINS: http://localhost:5173
-    volumes:
-      - backend-data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
 
   frontend:
     image: node:22-alpine
@@ -26,4 +50,4 @@ services:
       - backend
 
 volumes:
-  backend-data:
+  pg-data:

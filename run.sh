@@ -22,9 +22,12 @@ step "Зависимости"
 setup_backend || exit 1
 setup_frontend || exit 1
 
+step "База данных"
+ensure_postgres || exit 1
+
 if [ "$1" = "--reset" ]; then
   step "Сброс БД к тестовым данным"
-  (cd backend && "$VPY" -m app.seed --reset)
+  (cd backend && "$VPY" -m app.seed --reset) || exit 1
 fi
 
 stop() {
