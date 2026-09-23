@@ -87,6 +87,20 @@ export interface AnalyzeResult {
   mode: "llm" | "mock";
 }
 
+export interface TestDriveFinding {
+  key: string;
+  field: CardField;
+  title: string;
+  detail: string;
+  suggestion: string;
+  severity: "high" | "medium" | "low";
+}
+
+export interface TestDriveResult {
+  findings: TestDriveFinding[];
+  passed: boolean;
+}
+
 export interface BuildCardResult {
   card: TaskCard;
   sources: Partial<Record<CardField, string>>;
@@ -242,6 +256,7 @@ export const api = {
     post<BuildCardResult>("/build-card", { text, answers }),
   score: (card: TaskCard, confirmed_fields?: CardField[]) =>
     post<ScoreResult>("/score", { card, confirmed_fields }),
+  testDrive: (card: TaskCard) => post<TestDriveResult>("/test-drive", { card }),
 
   // Задачи и каталог
   catalog: (filters: CatalogFilters = {}) => request<Task[]>(`/catalog${query(filters)}`),

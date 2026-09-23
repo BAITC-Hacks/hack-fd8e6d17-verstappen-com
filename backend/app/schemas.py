@@ -98,6 +98,24 @@ class ScoreRequest(BaseModel):
     confirmed_fields: list[str] | None = None  # None = считать все поля
 
 
+class TestDriveRequest(BaseModel):
+    card: TaskCard
+
+
+class TestDriveFinding(BaseModel):
+    key: str
+    field: str
+    title: str
+    detail: str
+    suggestion: str
+    severity: Literal["high", "medium", "low"]
+
+
+class TestDriveResult(BaseModel):
+    findings: list[TestDriveFinding]
+    passed: bool
+
+
 # ---------- ИИ ----------
 
 class AnalyzeRequest(BaseModel):

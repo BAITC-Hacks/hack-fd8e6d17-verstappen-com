@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { api, CARD_FIELDS, FIELD_LABELS, type AnalyzeResult, type BuildCardResult, type CardField, type ScoreResult, type TaskCard, type TestDriveResult } from "./api";
 
 type Role = "business" | "team";
-type BuilderStep = 1 | 2 | 3 | 4 | 5;
+type BuilderStep = 1 | 2 | 3 | 4;
 
 const Arrow = () => <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5" /></svg>;
 const Spark = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2Z"/><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z"/></svg>;
@@ -13,19 +14,23 @@ const fields = [
   ["Skills needed", 5], ["Contact / owner", 5]
 ] as const;
 
+const emptyCard = (): TaskCard => Object.fromEntries(CARD_FIELDS.map((field) => [field, ""])) as TaskCard;
+
 function App() {
   const [role, setRole] = useState<Role>("business");
   const [builderOpen, setBuilderOpen] = useState(false);
   const [step, setStep] = useState<BuilderStep>(1);
   const [problem, setProblem] = useState("");
-  const [answers, setAnswers] = useState(["", "", ""]);
+  const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [built, setBuilt] = useState<BuildCardResult | null>(null);
+  const [card, setCard] = useState<TaskCard>(emptyCard);
+  const [liveScore, setLiveScore] = useState<ScoreResult | null>(null);
+  const [testDrive, setTestDrive] = useState<TestDriveResult | null>(null);
   const [confirmed, setConfirmed] = useState(false);
-
-  const score = useMemo(() => {
-    const base = problem.trim() ? 20 : 0;
-    const q = answers.filter(Boolean).length * 10;
-    return Math.min(100, base + q + (confirmed ? 50 : 0));
-  }, [problem, answers, confirmed]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [publishedId, setPublishedId] = useState<number | null>(null);
 
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
@@ -38,13 +43,67 @@ function App() {
     setRole("business");
     setBuilderOpen(true);
     setStep(1);
+    setProblem("");
+    setAnalysis(null);
+    setAnswers({});
+    setBuilt(null);
+    setCard(emptyCard());
+    setLiveScore(null);
+    setTestDrive(null);
+    setConfirmed(false);
+    setPublishedId(null);
+    setError("");
   };
 
   const closeBuilder = () => setBuilderOpen(false);
 
-  const nextStep = () => {
-    if (step === 1 && !problem.trim()) return;
-    setStep((value) => Math.min(5, value + 1) as BuilderStep);
+  const analyzeDraft = async () => {
+    setBusy(true); setError("");
+    try {
+      const result = await api.analyze(problem);
+      setAnalysis(result);
+      setAnswers(Object.fromEntries(result.questions.map((q) => [q.field, ""])));
+      setStep(2);
+    } catch (e) { setError(e instanceof Error ? e.message : "Не удалось проанализировать черновик"); }
+    finally { setBusy(false); }
+  };
+
+  const buildCard = async () => {
+    setBusy(true); setError("");
+    try {
+      const result = await api.buildCard(problem, Object.entries(answers).filter(([, answer]) => answer.trim()).map(([field, answer]) => ({ field: field as CardField, answer })));
+      setBuilt(result); setCard(result.card); setLiveScore(result.score);
+      setStep(3);
+    } catch (e) { setError(e instanceof Error ? e.message : "Не удалось собрать карточку"); }
+    finally { setBusy(false); }
+  };
+
+  useEffect(() => {
+    if (!builderOpen || step !== 3 || !built) return;
+    let alive = true;
+    const timer = window.setTimeout(() => {
+      Promise.all([api.score(card), api.testDrive(card)]).then(([scoreResult, driveResult]) => {
+        if (alive) { setLiveScore(scoreResult); setTestDrive(driveResult); }
+      }).catch((e) => { if (alive) setError(e instanceof Error ? e.message : "Не удалось проверить карточку"); });
+    }, 300);
+    return () => { alive = false; window.clearTimeout(timer); };
+  }, [builderOpen, step, card, built]);
+
+  const publish = async () => {
+    if (!confirmed) return;
+    setBusy(true); setError("");
+    try {
+      const result = await api.createTask({
+        card,
+        topic: "Другое",
+        tags: [],
+        owner: card.contact,
+        draft_text: problem,
+        confirmed_fields: CARD_FIELDS.filter((field) => Boolean(card[field].trim())),
+      });
+      setPublishedId(result.id);
+    } catch (e) { setError(e instanceof Error ? e.message : "Не удалось опубликовать задачу"); }
+    finally { setBusy(false); }
   };
 
   const previousStep = () => setStep((value) => Math.max(1, value - 1) as BuilderStep);
@@ -63,8 +122,8 @@ function App() {
           </nav>
           <div className="nav-actions">
             <div className="role-switch" aria-label="Choose your role">
-              <button className={role === "business" ? "active" : ""} onClick={() => setRole("business")}>Business</button>
-              <button className={role === "team" ? "active" : ""} onClick={() => setRole("team")}>Team</button>
+              <button className={role === "business" ? "active" : ""} onClick={() => { setRole("business"); window.location.hash = "/"; }}>Business</button>
+              <button className={role === "team" ? "active" : ""} onClick={() => { setRole("team"); window.location.hash = "/team"; }}>Team</button>
             </div>
             <button className="nav-cta" onClick={role === "business" ? openBuilder : () => scrollTo("explore")}>{
               role === "business" ? "Create challenge" : "Explore challenges"
@@ -125,7 +184,7 @@ function App() {
 
         <section className="explore section reveal" id="explore">
           <div className="explore-card">
-            <div><span className="section-kicker">LIVE CATALOG</span><h2>Find a challenge worth building.</h2><p>Browse by topic, readiness and status. Every published challenge is confirmed by its business owner.</p><button className="secondary-btn catalog-btn">Open catalog <Arrow /></button></div>
+            <div><span className="section-kicker">LIVE CATALOG</span><h2>Find a challenge worth building.</h2><p>Browse by topic, readiness and status. Every published challenge is confirmed by its business owner.</p><button className="secondary-btn catalog-btn" onClick={() => { window.location.hash = "/team"; }}>Open catalog <Arrow /></button></div>
             <div className="challenge-preview"><span className="topic">FINTECH</span><strong>Reduce time spent on manual invoice checks</strong><div><span>Readiness <b>91</b></span><span>Open for teams</span></div></div>
           </div>
         </section>
@@ -145,20 +204,23 @@ function App() {
       {builderOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeBuilder(); }}>
         <section className="builder-modal" role="dialog" aria-modal="true" aria-labelledby="builder-title">
           <div className="builder-top"><div><span className="section-kicker">AI CHALLENGE BUILDER</span><h2 id="builder-title">Build a publishable challenge</h2></div><button className="close-btn" onClick={closeBuilder} aria-label="Close">×</button></div>
-          <div className="progress"><span style={{ width: ((step - 1) / 4 * 100) + "%" }} /></div>
-          <div className="builder-steps">{["Problem","Clarify","Challenge Card","Score","Confirm"].map((label,index) => <span className={step >= index + 1 ? "done" : ""} key={label}>{index + 1}. {label}</span>)}</div>
+          <div className="progress"><span style={{ width: ((step - 1) / 3 * 100) + "%" }} /></div>
+          <div className="builder-steps">{["Черновик","Уточнение","Тест-драйв","Публикация"].map((label,index) => <span className={step >= index + 1 ? "done" : ""} key={label}>{index + 1}. {label}</span>)}</div>
 
-          {step === 1 && <div className="builder-body"><span className="step-label">STEP 1</span><h3>What real problem should students solve?</h3><p>Describe it in your own words. AI will ask follow-up questions instead of guessing missing facts.</p><textarea value={problem} onChange={(e) => setProblem(e.target.value)} placeholder="Example: Our team spends too much time checking invoices manually..." autoFocus /><div className="hint">Tip: mention who has the problem and what takes too much time.</div></div>}
+          {publishedId ? <div className="builder-body confirm-page"><div className="success-icon"><Check /></div><h3>Задача опубликована</h3><p>Карточка #{publishedId} сохранена в каталоге с рейтингом {liveScore?.total ?? 0}/100.</p><button className="secondary-btn" onClick={() => { closeBuilder(); window.location.hash = "/team"; }}>Перейти в каталог</button></div> : <>
+            {step === 1 && <div className="builder-body"><span className="step-label">ШАГ 1</span><h3>Какую задачу должна решить команда?</h3><p>Опишите проблему своими словами. Черновик отправится в API анализа; неподтверждённые сведения не будут автоматически добавлены в карточку.</p><textarea value={problem} onChange={(e) => setProblem(e.target.value)} placeholder="Например: сотрудники вручную проверяют счета, из-за этого обработка занимает много времени…" autoFocus /><div className="hint">Укажите, что происходит сейчас, кому мешает проблема и какого результата ждёте.</div></div>}
 
-          {step === 2 && <div className="builder-body"><span className="step-label">STEP 2</span><h3>AI clarification</h3><p>Answer at least three focused questions. Each answer improves the challenge.</p>{["Who are the target users or employees affected?","What result would make this solution successful?","What data, tools or constraints should the team know?"].map((q,index) => <label className="question" key={q}><span>+10 points</span>{q}<input value={answers[index]} onChange={(e) => setAnswers((old) => old.map((v,i) => i === index ? e.target.value : v))} placeholder="Your answer..." /></label>)}</div>}
+            {step === 2 && <div className="builder-body"><span className="step-label">ШАГ 2 · {analysis?.mode === "mock" ? "РЕЖИМ ЗАГЛУШКИ" : "ИИ-АНАЛИЗ"}</span><h3>Уточните важные детали</h3><p>Вопросы и потенциальные баллы рассчитаны сервером по текущей карточке.</p>{analysis?.questions.map((q) => <label className="question" key={q.field}><span>до +{q.points} баллов</span>{q.text}<input value={answers[q.field] ?? ""} onChange={(e) => setAnswers((old) => ({ ...old, [q.field]: e.target.value }))} placeholder="Ответ…" /></label>)}</div>}
 
-          {step === 3 && <div className="builder-body"><span className="step-label">STEP 3</span><h3>Challenge Card</h3><p>AI has structured your answers. Review the key fields before scoring.</p><div className="card-grid"><div><small>PROBLEM</small><strong>{problem || "Not provided"}</strong></div><div><small>TARGET USERS</small><strong>{answers[0] || "Not provided"}</strong></div><div><small>SUCCESS METRIC</small><strong>{answers[1] || "Not provided"}</strong></div><div><small>DATA & CONSTRAINTS</small><strong>{answers[2] || "Not provided"}</strong></div></div><div className="source-note"><Check /> Source: answers provided by business · AI does not invent facts</div></div>}
+            {step === 3 && <div className="builder-body"><span className="step-label">ШАГ 3 · ТЕСТ-ДРАЙВ · {built?.mode === "mock" ? "ЗАГЛУШКА" : "ИИ"}</span><h3>Проверьте карточку на реализуемость</h3><p>Поля можно редактировать. Источники показаны рядом; после правок сервер пересчитает рейтинг и проверки.</p><div className="business-card-fields">{CARD_FIELDS.map((field) => <label className="business-card-field" key={field}><span>{FIELD_LABELS[field]}</span><textarea rows={field === "context" || field === "data" || field === "constraints" ? 3 : 2} value={card[field]} onChange={(e) => setCard((old) => ({ ...old, [field]: e.target.value }))} />{built?.sources[field] && <small>{card[field] === built.card[field] ? `Источник: «${built.sources[field]}»` : "Изменено вручную · исходная цитата больше не подтверждает это значение"}</small>}</label>)}</div>
+              <div className="test-drive-panel"><div className="test-drive-heading"><strong>Результат тест-драйва</strong><span>{testDrive?.passed ? "Базовые проверки пройдены" : "Нужны уточнения"}</span></div>{testDrive?.findings.length ? testDrive.findings.map((finding) => <article className={`test-drive-finding severity-${finding.severity}`} key={finding.key}><b>{finding.title}</b><p>{finding.detail}</p><small>Поле: {FIELD_LABELS[finding.field]} · Что уточнить: {finding.suggestion}</small></article>) : <p>{testDrive ? "Критичных пробелов по текущим проверкам не найдено." : "Проверяем карточку…"}</p>}</div>
+              <div className="live-score"><strong>{liveScore ? `${liveScore.total}/100 · ${liveScore.level_label}` : "Пересчёт рейтинга…"}</strong>{liveScore?.breakdown.map((item) => <div key={item.key}><span>{item.label}</span><b>{item.points}/{item.weight}</b></div>)}</div>
+            </div>}
 
-          {step === 4 && <div className="builder-body score-page"><span className="step-label">STEP 4</span><h3>Challenge readiness</h3><div className="big-score"><strong>{score}</strong><span>/100</span></div><p>{score >= 70 ? "Ready for final confirmation. The core problem and clarification answers are present." : "Add clarification answers to increase readiness."}</p><div className="score-breakdown">{fields.slice(0,5).map(([name,points],index) => <div key={name}><span>{name}</span><b>{index === 0 && problem ? points : index > 0 && answers[index - 1] ? points : 0}/{points}</b></div>)}</div></div>}
-
-          {step === 5 && <div className="builder-body confirm-page"><div className="success-icon"><Check /></div><span className="step-label">STEP 5</span><h3>Human confirmation</h3><p>Review the card, then confirm it before publication. Business owners keep control of what becomes public.</p><label className="confirm-check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} /> I confirm that the challenge information is accurate.</label><div className="publish-note">AI can structure and explain the information, but it does not choose winners or publish without confirmation.</div></div>}
-
-          <div className="builder-actions">{step > 1 && <button className="secondary-btn" onClick={previousStep}>Back</button>}<button className="primary-btn" disabled={(step === 1 && !problem.trim()) || (step === 5 && !confirmed)} onClick={step === 5 ? closeBuilder : nextStep}>{step === 5 ? "Publish challenge" : "Continue"} <Arrow /></button></div>
+            {step === 4 && <div className="builder-body confirm-page"><div className="success-icon"><Check /></div><span className="step-label">ШАГ 4</span><h3>Подтвердите публикацию</h3><p>После публикации задача появится в каталоге со статусом «Открыта». Текущий рейтинг: <b>{liveScore?.total ?? 0}/100</b>.</p>{testDrive?.findings.length ? <div className="publish-note">В тест-драйве осталось замечаний: {testDrive.findings.length}. Вы можете вернуться к карточке, исправить их или подтвердить публикацию с текущими данными.</div> : null}<label className="confirm-check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} /> Подтверждаю, что проверил(а) карточку и готов(а) опубликовать задачу.</label></div>}
+          </>}
+          {error && <div className="error-note" role="alert">{error}</div>}
+          {!publishedId && <div className="builder-actions">{step > 1 && <button className="secondary-btn" onClick={previousStep} disabled={busy}>Назад</button>}{step === 1 && <button className="primary-btn" disabled={!problem.trim() || busy} onClick={analyzeDraft}>{busy ? "Анализируем…" : "Проанализировать"} <Arrow /></button>}{step === 2 && <button className="primary-btn" disabled={busy} onClick={buildCard}>{busy ? "Собираем…" : "Собрать карточку"} <Arrow /></button>}{step === 3 && <button className="primary-btn" onClick={() => setStep(4)}>Перейти к публикации <Arrow /></button>}{step === 4 && <button className="primary-btn" disabled={!confirmed || busy} onClick={publish}>{busy ? "Публикуем…" : "Подтвердить и опубликовать"} <Arrow /></button>}</div>}
         </section>
       </div>}
     </div>

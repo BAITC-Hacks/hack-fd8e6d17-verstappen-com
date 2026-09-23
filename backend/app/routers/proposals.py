@@ -40,8 +40,11 @@ def confirm_milestone(proposal_id: int, body: MilestoneCreate, session: Session 
     p = get_proposal(session, proposal_id)
     if p.status != "accepted":
         raise HTTPException(409, "Этапы подтверждаются только у выбранной команды")
+    note = body.note.strip() or "Этап подтверждён"
+    if any(m.get("note", "").strip().casefold() == note.casefold() for m in (p.milestones or [])):
+        raise HTTPException(409, "Этот этап уже подтверждён")
     team = get_team(session, p.team_id)
-    p.milestones = [*p.milestones, {"note": body.note, "points": MILESTONE_POINTS, "at": now().isoformat()}]
+    p.milestones = [*p.milestones, {"note": note, "points": MILESTONE_POINTS, "at": now().isoformat()}]
     team.points += MILESTONE_POINTS
     session.add_all([p, team])
     session.commit()

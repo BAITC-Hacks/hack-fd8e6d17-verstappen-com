@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app import ai, scoring
 from app.crud import validate_fields
+from app.drive_checks import inspect_task
 from app.schemas import (
     AnalyzeRequest,
     AnalyzeResult,
@@ -9,6 +10,8 @@ from app.schemas import (
     BuildCardResult,
     ScoreRequest,
     ScoreResult,
+    TestDriveRequest,
+    TestDriveResult,
 )
 
 router = APIRouter(prefix="/api", tags=["ИИ и рейтинг"])
@@ -28,3 +31,8 @@ def build_card(req: BuildCardRequest):
 def score(req: ScoreRequest):
     confirmed = validate_fields(req.confirmed_fields) if req.confirmed_fields is not None else None
     return scoring.score(req.card, confirmed)
+
+
+@router.post("/test-drive", response_model=TestDriveResult, summary="Проверка реализуемости карточки задачи")
+def test_drive(req: TestDriveRequest):
+    return inspect_task(req.card)
