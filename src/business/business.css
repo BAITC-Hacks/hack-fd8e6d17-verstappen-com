@@ -35,10 +35,13 @@
 .bz-prop dt{color:var(--tm-muted);font-size:11px;padding-top:2px}
 .bz-prop dd{margin:0;word-break:break-word}
 .bz-prop a{color:var(--tm-accent)}
-.bz-actions{display:flex;gap:8px;margin-top:auto}
+.bz-actions{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:auto}
+.bz-stage-count{grid-column:1/-1;display:grid;grid-template-columns:1fr 76px;gap:8px;align-items:center;font-size:11px;color:var(--tm-muted)}
+.bz-stage-count select{width:100%;padding:7px 9px;border-radius:9px;border:1px solid var(--tm-line);background:var(--tm-surface-2);color:var(--tm-text);font:inherit;font-size:12px}
 .bz-actions button,.bz-stages button{justify-content:center}
 .bz-actions button:disabled,.bz-stages button:disabled{opacity:.6;cursor:wait}
 .bz-stages{display:grid;gap:6px;margin-top:auto;padding-top:10px;border-top:1px solid var(--tm-line)}
+.bz-stage-progress{font-size:11px;color:var(--tm-muted)}
 .bz-stage{font-size:12.5px;color:var(--tm-green)}
 
 .bz-editor{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start}

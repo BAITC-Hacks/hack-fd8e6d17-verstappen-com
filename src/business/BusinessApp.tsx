@@ -238,6 +238,7 @@ function Proposals({
 }) {
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [stageCounts, setStageCounts] = useState<Record<number, number>>({});
 
   const run = async (id: number, action: () => Promise<unknown>) => {
     setBusy(id);
@@ -272,6 +273,8 @@ function Proposals({
       <div className="bz-proposals">
         {list.map((p) => {
           const nextStage = p.milestones.length + 1;
+          const plannedStages = stageCounts[p.id] ?? 3;
+          const stageWord = plannedStages === 1 ? "этап" : plannedStages < 5 ? "этапа" : "этапов";
           return (
             <article key={p.id} className={`bz-prop bz-prop-${p.status}`}>
               <header>
@@ -298,10 +301,38 @@ function Proposals({
 
               {p.status === "pending" && task.status !== "closed" && (
                 <div className="bz-actions">
-                  <button className="primary-btn" disabled={busy === p.id} onClick={() => run(p.id, () => api.decide(p.id, "accept"))}>
-                    Выбрать команду
+                  <label className="bz-stage-count">
+                    <span>Этапов в плане</span>
+                    <select
+                      value={plannedStages}
+                      onChange={(event) =>
+                        setStageCounts((counts) => ({ ...counts, [p.id]: Number(event.target.value) }))
+                      }
+                      aria-label={`Количество этапов для команды ${p.team.name}`}
+                    >
+                      {Array.from({ length: 10 }, (_, i) => i + 1).map((count) => (
+                        <option key={count} value={count}>
+                          {count}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    className="primary-btn"
+                    disabled={busy === p.id}
+                    onClick={() =>
+                      run(p.id, () =>
+                        api.decide(p.id, { decision: "accept", milestone_count: plannedStages }),
+                      )
+                    }
+                  >
+                    Выбрать · {plannedStages} {stageWord}
                   </button>
-                  <button className="secondary-btn" disabled={busy === p.id} onClick={() => run(p.id, () => api.decide(p.id, "reject"))}>
+                  <button
+                    className="secondary-btn"
+                    disabled={busy === p.id}
+                    onClick={() => run(p.id, () => api.decide(p.id, { decision: "reject" }))}
+                  >
                     Отклонить
                   </button>
                 </div>
@@ -309,6 +340,9 @@ function Proposals({
 
               {p.status === "accepted" && (
                 <div className="bz-stages">
+                  <small className="bz-stage-progress">
+                    Этапы: {p.milestones.length}/{p.milestone_limit ?? 10}
+                  </small>
                   {p.milestones.map((m, i) => (
                     <div key={i} className="bz-stage">
                       ✓ {m.note} <b>+{m.points}</b>
@@ -316,10 +350,12 @@ function Proposals({
                   ))}
                   <button
                     className="secondary-btn"
-                    disabled={busy === p.id}
+                    disabled={busy === p.id || p.milestones.length >= (p.milestone_limit ?? 10)}
                     onClick={() => run(p.id, () => api.milestone(p.id, `Этап ${nextStage} подтверждён`))}
                   >
-                    Подтвердить этап {nextStage} · команде +20 очков
+                    {p.milestones.length >= (p.milestone_limit ?? 10)
+                      ? "Все этапы подтверждены"
+                      : `Подтвердить этап ${nextStage} · команде +20 очков`}
                   </button>
                 </div>
               )}
