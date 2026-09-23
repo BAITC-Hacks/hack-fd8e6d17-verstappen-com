@@ -166,11 +166,11 @@ function App() {
           <div className="section-heading"><div><span className="section-kicker">THE AI SANA LOOP</span><h2>From one sentence<br/><span>to measurable impact.</span></h2></div><p>One interface connects the full journey: AI clarification, transparent readiness, team matching, human selection and measurable outcomes.</p></div>
           <div className="sana-feature-grid">
             <article className="sana-feature sana-feature-ai">
-              <div className="sana-feature-head"><span className="sana-icon"><Spark /></span><span>01 · AI COPILOT</span></div>
+              <div className="sana-feature-head"><span className="sana-icon"><Spark /></span><span>01 · GPT COPILOT</span></div>
               <h3>Your challenge has an AI partner.</h3>
               <p>Instead of a long form, the business gets focused questions and practical suggestions while building the task.</p>
               <div className="copilot-mini">
-                <div className="copilot-title"><span className="ai-dot" /> AI Sana Copilot <span>LIVE</span></div>
+                <div className="copilot-title"><span className="ai-dot" /> GPT Copilot <span>LIVE</span></div>
                 <div className="copilot-msg">I found 3 missing details that can improve your challenge.</div>
                 <div className="copilot-question">＋ What is the measurable success metric?</div>
                 <div className="copilot-question">＋ Which data can the team access?</div>
