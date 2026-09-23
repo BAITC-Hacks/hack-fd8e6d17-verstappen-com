@@ -154,6 +154,12 @@ def _ground_sources(
             card_values[field] = ""
             continue
         grounded[field] = quote
+    # Модель иногда оставляет пустыми название или контекст — без названия задачу нельзя
+    # опубликовать. Берём их из самого черновика (это цитата, новых фактов нет).
+    if not card_values["title"]:
+        card_values["title"] = grounded["title"] = _title_from(text)
+    if not card_values["context"]:
+        card_values["context"] = grounded["context"] = text.strip()
     return TaskCard(**card_values), grounded
 
 

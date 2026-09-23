@@ -132,3 +132,17 @@ def test_decision_is_final_and_closed_task_rejects_proposals(client):
     client.post("/api/tasks/1/close")
     r = client.post("/api/tasks/1/proposals", json={"team_id": 2, "idea": "Идея решения задачи", "plan": "План работы команды", "deadline": "1 неделя", "link": "https://a.b"})
     assert r.status_code == 409
+
+
+def test_grounding_keeps_title_and_context_from_draft():
+    """Если LLM не заполнила название/контекст, они берутся из черновика — задачу можно опубликовать."""
+    from app.ai import GroundedExtraction, SourceQuotes, _ground_sources
+    from app.schemas import TaskCard
+
+    draft = "Курьеры тратят много времени на маршруты. Хотим автоматизировать."
+    extraction = GroundedExtraction(card=TaskCard(need="Внедрить дроны"), sources=SourceQuotes(need="внедрить дроны"))
+    card, sources = _ground_sources(extraction, draft)
+    assert card.title == "Курьеры тратят много времени на маршруты"
+    assert card.context == draft
+    assert sources["title"] in draft and sources["context"] == draft
+    assert card.need == ""  # цитата не найдена в тексте — поле обнулено

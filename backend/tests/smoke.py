@@ -16,7 +16,7 @@ def call(method: str, path: str, body: dict | None = None) -> tuple[int, object]
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(BASE + path, data=data, method=method, headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=15) as r:
+        with urllib.request.urlopen(req, timeout=60) as r:
             raw = r.read().decode()
             return r.status, json.loads(raw) if raw.strip().startswith(("{", "[")) else raw
     except urllib.error.HTTPError as e:
@@ -38,7 +38,7 @@ def main() -> int:
 
     draft = "Абитуриенты задают одни и те же вопросы в директ, приёмная комиссия не успевает отвечать."
     s, a = call("POST", "/api/analyze", {"text": draft})
-    check(s == 200 and len(a["questions"]) >= 3, f"1–2. Черновик → {len(a['questions'])} уточняющих вопросов")
+    check(s == 200 and len(a["questions"]) >= 3, f"1–2. Черновик → {len(a['questions'])} уточняющих вопросов (ИИ: {'OpenAI' if a['mode'] == 'llm' else 'заглушка'})")
     weak = a["score"]["total"]
 
     answers = [
