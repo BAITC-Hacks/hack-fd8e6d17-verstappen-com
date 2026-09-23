@@ -1,7 +1,7 @@
 // Минимальный hash-роутер без зависимостей.
 //   #/          — лендинг
 //   #/team      — рабочее место команды
-//   #/business  — рабочее место бизнеса (участник 2)
+//   #/business  — кабинет бизнеса, #/new — мастер создания задачи
 import { useEffect, useState } from "react";
 
 export function useHashRoute(): string {

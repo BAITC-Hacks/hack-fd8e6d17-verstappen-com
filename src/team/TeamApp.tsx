@@ -1,6 +1,7 @@
 // Рабочее место студенческой команды: каталог, рекомендации, мои отклики, лидерборд.
 import { useEffect, useState } from "react";
 import { api, LEVEL_LABELS, type Level, type Proposal, type Task, type TaskStatus, type Team } from "../api";
+import { go } from "../router";
 import { TaskDetail } from "./TaskDetail";
 import { ErrorBox, LevelBadge, Loader, ScoreRing, StatusBadge, useLoad } from "./ui";
 import "./team.css";
@@ -80,6 +81,9 @@ export default function TeamApp() {
               ))}
             </select>
           </label>
+          <button className="secondary-btn tm-role-btn" onClick={() => go("/business")}>
+            Я бизнес →
+          </button>
         </div>
       </header>
 

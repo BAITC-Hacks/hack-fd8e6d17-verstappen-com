@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, CARD_FIELDS, FIELD_LABELS, type AnalyzeResult, type BuildCardResult, type CardField, type ScoreResult, type TaskCard, type TestDriveResult } from "./api";
+import { rememberOwner } from "./business/BusinessApp";
+import { go } from "./router";
 
 type Role = "business" | "team";
 type BuilderStep = 1 | 2 | 3 | 4;
@@ -13,6 +15,10 @@ const fields = [
   ["Success metric", 15], ["Data available", 10], ["Constraints", 10], ["Timeline", 10],
   ["Skills needed", 5], ["Contact / owner", 5]
 ] as const;
+
+const FALLBACK_TOPICS = ["Ритейл", "Финтех", "Образование", "Логистика", "HoReCa", "Медицина", "Госсектор", "Агро", "Другое"];
+// Теги влияют на рекомендации: задачу увидят команды с совпадающими навыками
+const TAG_SUGGESTIONS = ["Python", "ML", "NLP", "Чат-бот", "Telegram", "Backend", "Аналитика", "Computer Vision", "Автоматизация", "Оптимизация"];
 
 const emptyCard = (): TaskCard => Object.fromEntries(CARD_FIELDS.map((field) => [field, ""])) as TaskCard;
 
@@ -31,6 +37,10 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [publishedId, setPublishedId] = useState<number | null>(null);
+  const [topics, setTopics] = useState<string[]>(FALLBACK_TOPICS);
+  const [topic, setTopic] = useState("Другое");
+  const [tags, setTags] = useState<string[]>([]);
+  const [owner, setOwner] = useState("");
 
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
@@ -53,9 +63,37 @@ function App() {
     setConfirmed(false);
     setPublishedId(null);
     setError("");
+    setTopic("Другое");
+    setTags([]);
+    setOwner("");
+    api.meta().then((m) => setTopics(m.topics)).catch(() => undefined);
   };
 
-  const closeBuilder = () => setBuilderOpen(false);
+  const closeBuilder = () => {
+    setBuilderOpen(false);
+    if (window.location.hash === "#/new") go("/");
+  };
+
+  // #/new открывает мастер (кнопка «Новая задача» в кабинете бизнеса)
+  useEffect(() => {
+    const check = () => { if (window.location.hash === "#/new") openBuilder(); };
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Пример для демо: черновик из тестовых данных + его отрасль
+  const fillExample = async () => {
+    try {
+      const drafts = await api.demoDrafts();
+      // тот же пример, что в сценарии демо (README): «Абитуриенты задают одни и те же вопросы…»
+      const d = drafts.find((x) => x.industry === "Образование") ?? drafts[0];
+      if (d) { setProblem(d.text); setTopic(d.industry); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Не удалось загрузить пример"); }
+  };
+
+  const toggleTag = (tag: string) => setTags((old) => old.includes(tag) ? old.filter((t) => t !== tag) : [...old, tag]);
 
   const analyzeDraft = async () => {
     setBusy(true); setError("");
@@ -95,13 +133,14 @@ function App() {
     try {
       const result = await api.createTask({
         card,
-        topic: "Другое",
-        tags: [],
-        owner: card.contact,
+        topic,
+        tags,
+        owner: owner.trim() || card.contact,
         draft_text: problem,
         confirmed_fields: CARD_FIELDS.filter((field) => Boolean(card[field].trim())),
       });
       setPublishedId(result.id);
+      rememberOwner(result.owner);
     } catch (e) { setError(e instanceof Error ? e.message : "Не удалось опубликовать задачу"); }
     finally { setBusy(false); }
   };
@@ -122,7 +161,7 @@ function App() {
           </nav>
           <div className="nav-actions">
             <div className="role-switch" aria-label="Choose your role">
-              <button className={role === "business" ? "active" : ""} onClick={() => { setRole("business"); window.location.hash = "/"; }}>Business</button>
+              <button className={role === "business" ? "active" : ""} onClick={() => { setRole("business"); go("/business"); }}>Business</button>
               <button className={role === "team" ? "active" : ""} onClick={() => { setRole("team"); window.location.hash = "/team"; }}>Team</button>
             </div>
             <button className="nav-cta" onClick={role === "business" ? openBuilder : () => scrollTo("explore")}>{
@@ -207,8 +246,8 @@ function App() {
           <div className="progress"><span style={{ width: ((step - 1) / 3 * 100) + "%" }} /></div>
           <div className="builder-steps">{["Черновик","Уточнение","Тест-драйв","Публикация"].map((label,index) => <span className={step >= index + 1 ? "done" : ""} key={label}>{index + 1}. {label}</span>)}</div>
 
-          {publishedId ? <div className="builder-body confirm-page"><div className="success-icon"><Check /></div><h3>Задача опубликована</h3><p>Карточка #{publishedId} сохранена в каталоге с рейтингом {liveScore?.total ?? 0}/100.</p><button className="secondary-btn" onClick={() => { closeBuilder(); window.location.hash = "/team"; }}>Перейти в каталог</button></div> : <>
-            {step === 1 && <div className="builder-body"><span className="step-label">ШАГ 1</span><h3>Какую задачу должна решить команда?</h3><p>Опишите проблему своими словами. Черновик отправится в API анализа; неподтверждённые сведения не будут автоматически добавлены в карточку.</p><textarea value={problem} onChange={(e) => setProblem(e.target.value)} placeholder="Например: сотрудники вручную проверяют счета, из-за этого обработка занимает много времени…" autoFocus /><div className="hint">Укажите, что происходит сейчас, кому мешает проблема и какого результата ждёте.</div></div>}
+          {publishedId ? <div className="builder-body confirm-page"><div className="success-icon"><Check /></div><h3>Задача опубликована</h3><p>Карточка #{publishedId} сохранена в каталоге с рейтингом {liveScore?.total ?? 0}/100.</p><div className="publish-links"><button className="primary-btn" onClick={() => { setBuilderOpen(false); go(`/business/${publishedId}`); }}>Открыть в кабинете <Arrow /></button><button className="secondary-btn" onClick={() => { setBuilderOpen(false); go("/team"); }}>Перейти в каталог</button></div></div> : <>
+            {step === 1 && <div className="builder-body"><span className="step-label">ШАГ 1</span><h3>Какую задачу должна решить команда?</h3><p>Опишите проблему своими словами. Черновик отправится в API анализа; неподтверждённые сведения не будут автоматически добавлены в карточку.</p><textarea value={problem} onChange={(e) => setProblem(e.target.value)} placeholder="Например: сотрудники вручную проверяют счета, из-за этого обработка занимает много времени…" autoFocus /><div className="hint">Укажите, что происходит сейчас, кому мешает проблема и какого результата ждёте. <button type="button" className="link-btn" onClick={fillExample}>Подставить пример</button></div></div>}
 
             {step === 2 && <div className="builder-body"><span className="step-label">ШАГ 2 · {analysis?.mode === "mock" ? "РЕЖИМ ЗАГЛУШКИ" : "ИИ-АНАЛИЗ"}</span><h3>Уточните важные детали</h3><p>Вопросы и потенциальные баллы рассчитаны сервером по текущей карточке.</p>{analysis?.questions.map((q) => <label className="question" key={q.field}><span>до +{q.points} баллов</span>{q.text}<input value={answers[q.field] ?? ""} onChange={(e) => setAnswers((old) => ({ ...old, [q.field]: e.target.value }))} placeholder="Ответ…" /></label>)}</div>}
 
@@ -217,7 +256,7 @@ function App() {
               <div className="live-score"><strong>{liveScore ? `${liveScore.total}/100 · ${liveScore.level_label}` : "Пересчёт рейтинга…"}</strong>{liveScore?.breakdown.map((item) => <div key={item.key}><span>{item.label}</span><b>{item.points}/{item.weight}</b></div>)}</div>
             </div>}
 
-            {step === 4 && <div className="builder-body confirm-page"><div className="success-icon"><Check /></div><span className="step-label">ШАГ 4</span><h3>Подтвердите публикацию</h3><p>После публикации задача появится в каталоге со статусом «Открыта». Текущий рейтинг: <b>{liveScore?.total ?? 0}/100</b>.</p>{testDrive?.findings.length ? <div className="publish-note">В тест-драйве осталось замечаний: {testDrive.findings.length}. Вы можете вернуться к карточке, исправить их или подтвердить публикацию с текущими данными.</div> : null}<label className="confirm-check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} /> Подтверждаю, что проверил(а) карточку и готов(а) опубликовать задачу.</label></div>}
+            {step === 4 && <div className="builder-body confirm-page"><div className="success-icon"><Check /></div><span className="step-label">ШАГ 4</span><h3>Подтвердите публикацию</h3><p>После публикации задача появится в каталоге со статусом «Открыта». Текущий рейтинг: <b>{liveScore?.total ?? 0}/100</b>.</p>{testDrive?.findings.length ? <div className="publish-note">В тест-драйве осталось замечаний: {testDrive.findings.length}. Вы можете вернуться к карточке, исправить их или подтвердить публикацию с текущими данными.</div> : null}<div className="publish-meta"><label>Компания<input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder={card.contact || "Название компании"} /></label><label>Тема<select value={topic} onChange={(e) => setTopic(e.target.value)}>{topics.map((t) => <option key={t}>{t}</option>)}</select></label><div className="publish-tags"><span>Навыки для команды <small>— по ним задачу рекомендуют командам</small></span><div>{TAG_SUGGESTIONS.map((t) => <button type="button" key={t} className={tags.includes(t) ? "active" : ""} onClick={() => toggleTag(t)}>{t}</button>)}</div></div></div><label className="confirm-check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} /> Подтверждаю, что проверил(а) карточку и готов(а) опубликовать задачу.</label></div>}
           </>}
           {error && <div className="error-note" role="alert">{error}</div>}
           {!publishedId && <div className="builder-actions">{step > 1 && <button className="secondary-btn" onClick={previousStep} disabled={busy}>Назад</button>}{step === 1 && <button className="primary-btn" disabled={!problem.trim() || busy} onClick={analyzeDraft}>{busy ? "Анализируем…" : "Проанализировать"} <Arrow /></button>}{step === 2 && <button className="primary-btn" disabled={busy} onClick={buildCard}>{busy ? "Собираем…" : "Собрать карточку"} <Arrow /></button>}{step === 3 && <button className="primary-btn" onClick={() => setStep(4)}>Перейти к публикации <Arrow /></button>}{step === 4 && <button className="primary-btn" disabled={!confirmed || busy} onClick={publish}>{busy ? "Публикуем…" : "Подтвердить и опубликовать"} <Arrow /></button>}</div>}
