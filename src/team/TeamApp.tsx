@@ -184,11 +184,15 @@ function TaskItem({ task, position, onOpen, reason }: { task: Task; position?: n
         {task.status !== "open" && <StatusBadge status={task.status} />}
       </div>
       <div className="tm-card-body">
-        <div>
+        <div className="tm-card-copy">
           <h3>{task.title}</h3>
+          <div className="tm-card-label">ЧТО НУЖНО РЕШИТЬ</div>
           <p>{task.card.need || task.card.context || "Описание не заполнено"}</p>
         </div>
-        <ScoreRing score={task.score} />
+        <div className="tm-card-score">
+          <ScoreRing score={task.score} />
+          <span>ГОТОВНОСТЬ</span>
+        </div>
       </div>
       {reason && <div className="tm-reason">✓ {reason}</div>}
       {task.needs_clarification && <div className="tm-warn-sm">Требует уточнения</div>}
