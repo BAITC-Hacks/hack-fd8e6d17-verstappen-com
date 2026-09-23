@@ -1,7 +1,12 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from sqlmodel import Session, SQLModel, create_engine
+
+# .env читается здесь, чтобы сервер, сброс БД (python -m app.seed) и любые скрипты
+# работали с одной и той же базой. Уже заданные переменные окружения не перезаписываются.
+load_dotenv()
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
@@ -15,7 +20,8 @@ if DATABASE_URL.startswith("postgresql+asyncpg://"):
 elif DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
 
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+# Для PostgreSQL — таймаут подключения: без него при выключенном сервере БД запуск висит молча
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {"connect_timeout": 5}
 engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
 
 
