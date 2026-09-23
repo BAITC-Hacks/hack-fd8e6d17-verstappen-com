@@ -1,0 +1,18 @@
+/* Фон с волнами: фиксирован под всем содержимым, клики не перехватывает. */
+body{background:#111318}
+.waves{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.waves-glow{position:absolute;inset:-20% -10% auto;height:70%;background:radial-gradient(ellipse at 50% 0%,rgba(49,133,252,.10),transparent 60%)}
+.waves-band{position:absolute;left:0;width:100%;height:46vh;min-height:260px}
+.waves-band-bottom{bottom:0}
+/* верхняя полоса — те же волны, перевёрнутые и бледнее */
+.waves-band-top{top:0;height:30vh;transform:scaleY(-1);opacity:.7}
+.wave{position:absolute;left:0;bottom:0;width:200%;height:100%;
+  animation-name:wave-drift,wave-bob;animation-timing-function:linear,ease-in-out;
+  animation-iteration-count:infinite,infinite;animation-direction:normal,alternate;will-change:transform}
+.waves-band .wave:nth-child(2){animation-direction:reverse,alternate}
+@keyframes wave-drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
+@keyframes wave-bob{from{translate:0 0}to{translate:0 14px}}
+@media (prefers-reduced-motion: reduce){.wave{animation:none}}
+
+/* Контент поверх волн: у корневых контейнеров страниц убираем сплошной фон */
+.app,.tm-app{position:relative;z-index:1;background:transparent!important}
