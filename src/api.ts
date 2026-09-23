@@ -18,10 +18,10 @@ export type TaskCard = Record<CardField, string>;
 
 export const FIELD_LABELS: Record<CardField, string> = {
   title: "Название",
-  context: "Контекст",
-  need: "Потребность",
-  users: "Пользователи",
-  data: "Данные и материалы",
+  context: "Описание ситуации",
+  need: "Что нужно решить",
+  users: "Для кого",
+  data: "Доступные данные",
   constraints: "Ограничения",
   expected_result: "Ожидаемый результат",
   success_criteria: "Критерии успеха",

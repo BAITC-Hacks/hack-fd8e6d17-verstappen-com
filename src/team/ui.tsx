@@ -32,13 +32,23 @@ export function ScoreRing({ score, size = 64 }: { score: number; size?: number }
   );
 }
 
+function shortCriterionLabel(label: string): string {
+  const normalized = label.toLowerCase();
+  if (normalized.includes("контекст") && normalized.includes("потреб")) return "Контекст и задача";
+  if (normalized.includes("данные")) return "Данные";
+  if (normalized.includes("ожидаемый")) return "Результат";
+  if (normalized.includes("критер")) return "Критерии успеха";
+  if (normalized.includes("бизнес")) return "Связь с бизнесом";
+  return label;
+}
+
 export function ScoreBreakdown({ detail }: { detail: ScoreResult }) {
   return (
     <div className="tm-breakdown">
       {detail.breakdown.map((c) => (
         <div key={c.key} className="tm-crit">
           <div className="tm-crit-head">
-            <span>{c.label}</span>
+            <span title={c.label}>{shortCriterionLabel(c.label)}</span>
             <b>
               {c.points}/{c.weight}
             </b>

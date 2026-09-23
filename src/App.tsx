@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "./sana-wow.css";
 import { api, CARD_FIELDS, FIELD_LABELS, type AnalyzeResult, type BuildCardResult, type CardField, type ScoreResult, type TaskCard, type TestDriveResult } from "./api";
 import { rememberOwner } from "./business/BusinessApp";
 import { go } from "./router";
@@ -200,12 +201,70 @@ function App() {
           <div><strong>10</strong><span>structured fields</span></div><div><strong>0–100</strong><span>readiness score</span></div><div><strong>3+</strong><span>AI clarification questions</span></div><div><strong>1</strong><span>real path to a team</span></div>
         </section>
 
-        <section className="section reveal" id="features">
-          <div className="section-heading"><div><span className="section-kicker">WHY AI SANA</span><h2>Less vague ideas.<br/><span>More buildable challenges.</span></h2></div><p>The platform turns an unstructured business problem into a transparent, human-confirmed challenge card.</p></div>
-          <div className="feature-grid stagger">
-            <article className="feature-card featured"><div className="feature-icon"><Spark /></div><span>01</span><h3>AI clarification</h3><p>AI asks focused questions before the challenge becomes publishable. Every answer is grounded in what the business provides.</p><div className="feature-tag">No invented facts</div></article>
-            <article className="feature-card"><div className="feature-icon">✓</div><span>02</span><h3>Readiness score</h3><p>See exactly where points come from, what is missing, and how edits change the score.</p><div className="feature-tag">Transparent 0–100</div></article>
-            <article className="feature-card"><div className="feature-icon">↗</div><span>03</span><h3>Student teams</h3><p>Teams discover open challenges and submit an idea, plan, deadline and project link.</p><div className="feature-tag">Human selection</div></article>
+        <section className="section reveal sana-features" id="features">
+          <div className="section-heading"><div><span className="section-kicker">THE AI SANA LOOP</span><h2>From one sentence<br/><span>to measurable impact.</span></h2></div><p>One interface connects the full journey: AI clarification, transparent readiness, team matching, human selection and measurable outcomes.</p></div>
+          <div className="sana-feature-grid">
+            <article className="sana-feature sana-feature-ai">
+              <div className="sana-feature-head"><span className="sana-icon"><Spark /></span><span>01 · GPT COPILOT</span></div>
+              <h3>Your challenge has an AI partner.</h3>
+              <p>Instead of a long form, the business gets focused questions and practical suggestions while building the task.</p>
+              <div className="copilot-mini">
+                <div className="copilot-title"><span className="ai-dot" /> GPT Copilot <span>LIVE</span></div>
+                <div className="copilot-msg">I found 3 missing details that can improve your challenge.</div>
+                <div className="copilot-question">＋ What is the measurable success metric?</div>
+                <div className="copilot-question">＋ Which data can the team access?</div>
+              </div>
+            </article>
+            <article className="sana-feature">
+              <div className="sana-feature-head"><span className="sana-icon">✓</span><span>02 · EXPLAINABLE SCORE</span></div>
+              <h3>Not just 82/100. Know why.</h3>
+              <p>Every point is traceable to a concrete part of the challenge, with clear next steps.</p>
+              <div className="score-bars">
+                <div><span>Context</span><b>10/10</b><i style={{width:"100%"}} /></div>
+                <div><span>Success metric</span><b>8/15</b><i style={{width:"53%"}} /></div>
+                <div><span>Data</span><b>15/20</b><i style={{width:"75%"}} /></div>
+              </div>
+              <div className="improve-chip">✨ Improve to 90+</div>
+            </article>
+            <article className="sana-feature">
+              <div className="sana-feature-head"><span className="sana-icon">↗</span><span>03 · TEAM MATCH</span></div>
+              <h3>Put the right teams in front of the business.</h3>
+              <p>Recommendations explain the match using skills, interests and technology — while the business keeps the final choice.</p>
+              <div className="match-card">
+                <div><strong>AI Admission Assistant</strong><span>Open · 91/100</span></div>
+                <div className="match-score"><b>94%</b><span>team match</span></div>
+                <div className="match-tags"><span>Python</span><span>NLP</span><span>React</span></div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section className="sana-journey section reveal" id="journey">
+          <div className="section-heading compact"><div><span className="section-kicker">ONE CONTINUOUS JOURNEY</span><h2>Challenge → Team → <span>Impact.</span></h2></div><p>No dead end after publishing. The interface keeps the whole project story visible.</p></div>
+          <div className="journey-track">
+            <div className="journey-line" />
+            <div className="journey-step"><span className="journey-dot done">✓</span><b>Draft</b><small>One business sentence</small></div>
+            <div className="journey-step"><span className="journey-dot done">✓</span><b>AI Analysis</b><small>Questions + readiness</small></div>
+            <div className="journey-step"><span className="journey-dot done">✓</span><b>Published</b><small>Open catalog</small></div>
+            <div className="journey-step"><span className="journey-dot active">4</span><b>Team selected</b><small>Human decision</small></div>
+            <div className="journey-step"><span className="journey-dot">5</span><b>Impact</b><small>KPI + milestone</small></div>
+          </div>
+        </section>
+
+        <section className="sana-impact section reveal">
+          <div className="impact-panel">
+            <div className="impact-copy">
+              <span className="section-kicker">BUSINESS IMPACT</span>
+              <h2>Finish with a result,<br/><span>not just a proposal.</span></h2>
+              <p>When a milestone is confirmed, AI Sana can turn the project into a measurable story: what changed, who benefited and what the team achieved.</p>
+              <button className="secondary-btn" onClick={() => scrollTo("how")}>See the full journey <Arrow /></button>
+            </div>
+            <div className="impact-preview">
+              <div className="impact-label">PROJECT IMPACT · DEMO</div>
+              <strong>AI Admission Assistant</strong>
+              <div className="impact-before-after"><div><small>BEFORE</small><b>87%</b><span>repeated questions</span></div><div className="impact-arrow">↓ 37%</div><div><small>AFTER</small><b>50%</b><span>repeated questions</span></div></div>
+              <div className="impact-stats"><span><b>18h</b> saved / month</span><span><b>+20</b> team points</span><span><b>2.4k</b> students affected</span></div>
+            </div>
           </div>
         </section>
 
@@ -222,9 +281,14 @@ function App() {
         </section>
 
         <section className="explore section reveal" id="explore">
-          <div className="explore-card">
-            <div><span className="section-kicker">LIVE CATALOG</span><h2>Find a challenge worth building.</h2><p>Browse by topic, readiness and status. Every published challenge is confirmed by its business owner.</p><button className="secondary-btn catalog-btn" onClick={() => { window.location.hash = "/team"; }}>Open catalog <Arrow /></button></div>
-            <div className="challenge-preview"><span className="topic">FINTECH</span><strong>Reduce time spent on manual invoice checks</strong><div><span>Readiness <b>91</b></span><span>Open for teams</span></div></div>
+          <div className="section-heading compact"><div><span className="section-kicker">LIVE CATALOG</span><h2>Find a challenge <span>worth building.</span></h2></div><p>Every published challenge stays human-confirmed. Recommendations help teams discover where their skills fit.</p></div>
+          <div className="catalog-showcase">
+            <div className="catalog-toolbar"><span>Recommended for your team</span><div><button className="catalog-chip active">All</button><button className="catalog-chip">AI</button><button className="catalog-chip">Web</button><button className="catalog-chip">Data</button></div></div>
+            <div className="catalog-card-main">
+              <div className="catalog-main-content"><div className="catalog-meta"><span className="topic">EDUCATION · AI</span><span className="ready-pill">91 · PRIORITY</span></div><h3>AI assistant for repetitive admission questions</h3><p>Build a practical solution that helps applicants get consistent answers while reducing repetitive work for staff.</p><div className="catalog-tags"><span>Python</span><span>NLP</span><span>React</span><span>4 weeks</span></div></div>
+              <div className="catalog-match"><small>YOUR TEAM MATCH</small><strong>94%</strong><span>4 skills matched</span><button className="primary-btn" onClick={() => { window.location.hash = "/team"; }}>View challenge <Arrow /></button></div>
+            </div>
+            <div className="catalog-footer"><span>👥 3 proposals</span><span>🟢 Open</span><span>Human selection</span><span>AI recommendation</span></div>
           </div>
         </section>
 
@@ -251,7 +315,7 @@ function App() {
 
             {step === 2 && <div className="builder-body"><span className="step-label">ШАГ 2 · {analysis?.mode === "mock" ? "РЕЖИМ ЗАГЛУШКИ" : "ИИ-АНАЛИЗ"}</span><h3>Уточните важные детали</h3><p>Вопросы и потенциальные баллы рассчитаны сервером по текущей карточке.</p>{analysis?.questions.map((q) => <label className="question" key={q.field}><span>до +{q.points} баллов</span>{q.text}<input value={answers[q.field] ?? ""} onChange={(e) => setAnswers((old) => ({ ...old, [q.field]: e.target.value }))} placeholder="Ответ…" /></label>)}</div>}
 
-            {step === 3 && <div className="builder-body"><span className="step-label">ШАГ 3 · ТЕСТ-ДРАЙВ · {built?.mode === "mock" ? "ЗАГЛУШКА" : "ИИ"}</span><h3>Проверьте карточку на реализуемость</h3><p>Поля можно редактировать. Источники показаны рядом; после правок сервер пересчитает рейтинг и проверки.</p><div className="business-card-fields">{CARD_FIELDS.map((field) => <label className="business-card-field" key={field}><span>{FIELD_LABELS[field]}</span><textarea rows={field === "context" || field === "data" || field === "constraints" ? 3 : 2} value={card[field]} onChange={(e) => setCard((old) => ({ ...old, [field]: e.target.value }))} />{built?.sources[field] && <small>{card[field] === built.card[field] ? `Источник: «${built.sources[field]}»` : "Изменено вручную · исходная цитата больше не подтверждает это значение"}</small>}</label>)}</div>
+            {step === 3 && <div className="builder-body"><span className="step-label">ШАГ 3 · ТЕСТ-ДРАЙВ · {built?.mode === "mock" ? "ЗАГЛУШКА" : "ИИ"}</span><h3>Проверьте карточку на реализуемость</h3><p>Поля можно редактировать. Источники показаны рядом; после правок сервер пересчитает рейтинг и проверки.</p><div className="business-card-fields">{CARD_FIELDS.map((field) => { const hint = liveScore?.hints.find((item) => item.field === field); return <label className={`business-card-field ${hint ? "needs-improvement" : ""} ${field === "need" || field === "expected_result" || field === "success_criteria" ? "priority-field" : ""}`} key={field}><span className="field-heading"><b>{FIELD_LABELS[field]}</b>{hint && <em>Можно улучшить <strong>+{hint.gain}</strong></em>}</span><textarea rows={1} value={card[field]} onChange={(e) => { setCard((old) => ({ ...old, [field]: e.target.value })); e.currentTarget.style.height = "auto"; e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`; }} onFocus={(e) => { e.currentTarget.style.height = "auto"; e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`; }} />{hint && <span className="field-improvement"><b>Как улучшить</b>{hint.text}</span>}{built?.sources[field] && <small>{card[field] === built.card[field] ? `Источник: «${built.sources[field]}»` : "Изменено вручную · исходная цитата больше не подтверждает это значение"}</small>}</label>; })}</div>
               <div className="test-drive-panel"><div className="test-drive-heading"><strong>Результат тест-драйва</strong><span>{testDrive?.passed ? "Базовые проверки пройдены" : "Нужны уточнения"}</span></div>{testDrive?.findings.length ? testDrive.findings.map((finding) => <article className={`test-drive-finding severity-${finding.severity}`} key={finding.key}><b>{finding.title}</b><p>{finding.detail}</p><small>Поле: {FIELD_LABELS[finding.field]} · Что уточнить: {finding.suggestion}</small></article>) : <p>{testDrive ? "Критичных пробелов по текущим проверкам не найдено." : "Проверяем карточку…"}</p>}</div>
               <div className="live-score"><strong>{liveScore ? `${liveScore.total}/100 · ${liveScore.level_label}` : "Пересчёт рейтинга…"}</strong>{liveScore?.breakdown.map((item) => <div key={item.key}><span>{item.label}</span><b>{item.points}/{item.weight}</b></div>)}</div>
             </div>}

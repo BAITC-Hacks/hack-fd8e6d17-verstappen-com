@@ -112,9 +112,10 @@ export default function TeamApp() {
 function Catalog({ onOpen, version }: { onOpen: (id: number) => void; version: number }) {
   const [topic, setTopic] = useState("");
   const [level, setLevel] = useState<Level | "">("");
-  const [status, setStatus] = useState<TaskStatus | "">("");
+  const [status, setStatus] = useState<TaskStatus | "">("open");
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"score" | "newest">("score");
   const meta = useLoad(() => api.meta(), []);
   const list = useLoad(
     () => api.catalog({ topic: topic || undefined, level: level || undefined, status: status || undefined, q: search || undefined }),
@@ -126,52 +127,53 @@ function Catalog({ onOpen, version }: { onOpen: (id: number) => void; version: n
     return () => clearTimeout(id);
   }, [q]);
 
+  const tasks = [...(list.data ?? [])].sort((a, b) =>
+    sort === "score" ? b.score - a.score : new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+  const readyCount = tasks.filter((t) => t.level === "ready" || t.level === "priority").length;
+  const totalProposals = tasks.reduce((sum, t) => sum + t.proposals_count, 0);
+  const activeFilters = [topic, level, status !== "open" ? status : "", search].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setTopic(""); setLevel(""); setStatus("open"); setQ(""); setSearch("");
+  };
+
   return (
-    <section>
-      <div className="tm-title">
+    <section className="catalog-page">
+      <div className="catalog-hero">
         <div>
-          <span className="section-kicker">ОБЩИЙ КАТАЛОГ</span>
-          <h1>Задачи от бизнеса</h1>
-          <p className="tm-muted">
-            Все опубликованные задачи. Чем выше рейтинг готовности, тем выше задача в списке и тем проще начать работу.
-          </p>
+          <span className="section-kicker">AI SANA · CHALLENGE MARKETPLACE</span>
+          <h1>Найди задачу, которую хочется <span>решить.</span></h1>
+          <p className="tm-muted">Реальные бизнес-задачи уже структурированы GPT. Смотри требования, рейтинг готовности и откликайся своей командой.</p>
         </div>
+        <div className="catalog-hero-badge"><span>OPEN CHALLENGES</span><strong>{tasks.length}</strong><small>доступно сейчас</small></div>
       </div>
 
-      <div className="tm-filters">
-        <input className="tm-search" placeholder="Поиск по задачам" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select value={topic} onChange={(e) => setTopic(e.target.value)} aria-label="Тема">
-          <option value="">Все темы</option>
-          {meta.data?.topics.map((t) => (
-            <option key={t}>{t}</option>
-          ))}
-        </select>
-        <select value={status} onChange={(e) => setStatus(e.target.value as TaskStatus | "")} aria-label="Статус">
-          <option value="">Любой статус</option>
-          <option value="open">Открыта</option>
-          <option value="in_progress">В работе</option>
-          <option value="closed">Закрыта</option>
-        </select>
+      <div className="catalog-stats">
+        <div><span>Открытых задач</span><strong>{tasks.length}</strong></div>
+        <div><span>Готовы к старту</span><strong>{readyCount}</strong></div>
+        <div><span>Всего откликов</span><strong>{totalProposals}</strong></div>
+        <div><span>Средняя готовность</span><strong>{tasks.length ? Math.round(tasks.reduce((s, t) => s + t.score, 0) / tasks.length) : 0}<small>/100</small></strong></div>
+      </div>
+
+      <div className="catalog-toolbar">
+        <div className="catalog-search-wrap"><span>⌕</span><input className="tm-search" placeholder="Поиск по названию, проблеме или данным…" value={q} onChange={(e) => setQ(e.target.value)} />{q && <button className="catalog-clear-search" onClick={() => setQ("")}>×</button>}</div>
+        <select value={topic} onChange={(e) => setTopic(e.target.value)} aria-label="Тема"><option value="">Все темы</option>{meta.data?.topics.map((t) => <option key={t}>{t}</option>)}</select>
+        <select value={sort} onChange={(e) => setSort(e.target.value as "score" | "newest")} aria-label="Сортировка"><option value="score">По готовности</option><option value="newest">Сначала новые</option></select>
+        <button className="catalog-filter-toggle" onClick={() => setStatus(status === "open" ? "" : "open")}>{status === "open" ? "● Только открытые" : "Все статусы"}</button>
+      </div>
+
+      <div className="catalog-subtoolbar">
         <div className="tm-chips" role="group" aria-label="Уровень готовности">
-          <button className={level === "" ? "active" : ""} onClick={() => setLevel("")}>
-            Все уровни
-          </button>
-          {(["priority", "ready", "working", "draft"] as Level[]).map((l) => (
-            <button key={l} className={level === l ? "active" : ""} onClick={() => setLevel(l)}>
-              {LEVEL_LABELS[l]}
-            </button>
-          ))}
+          {([["", "Все"], ["priority", "Приоритет"], ["ready", "Готова"], ["working", "Рабочая"], ["draft", "Черновик"]] as const).map(([value, label]) => <button key={value} className={level === value ? "active" : ""} onClick={() => setLevel(value as Level | "")}>{label}</button>)}
         </div>
+        <div className="catalog-filter-meta">{activeFilters > 0 && <><span>{activeFilters} фильтр.</span><button onClick={clearFilters}>Сбросить</button></>}<span>{tasks.length} результатов</span></div>
       </div>
 
-      {list.loading && !list.data && <Loader />}
-      {list.error && <ErrorBox error={list.error} onRetry={list.reload} />}
-      {list.data && list.data.length === 0 && <div className="tm-empty">По этим фильтрам задач нет</div>}
-      <div className="tm-grid">
-        {list.data?.map((t, i) => (
-          <TaskItem key={t.id} task={t} position={i + 1} onOpen={onOpen} />
-        ))}
-      </div>
+      {list.loading && !list.data && <div className="catalog-loading"><Loader /><span>Загружаем реальные задачи…</span></div>}
+      {list.error && <div className="catalog-error"><div><strong>Каталог не подключён</strong><span>{list.error.message}</span><small>Проверь, что FastAPI запущен на http://127.0.0.1:8000, затем нажми «Повторить».</small></div><button onClick={list.reload}>Повторить</button></div>}
+      {list.data && tasks.length === 0 && <div className="tm-empty catalog-empty"><strong>По этим фильтрам задач нет</strong><span>Измени фильтры или посмотри все открытые задачи.</span><button onClick={clearFilters}>Сбросить фильтры</button></div>}
+      <div className="tm-grid catalog-grid">{tasks.map((t, i) => <TaskItem key={t.id} task={t} position={i + 1} onOpen={onOpen} />)}</div>
     </section>
   );
 }
@@ -186,11 +188,15 @@ function TaskItem({ task, position, onOpen, reason }: { task: Task; position?: n
         {task.status !== "open" && <StatusBadge status={task.status} />}
       </div>
       <div className="tm-card-body">
-        <div>
+        <div className="tm-card-copy">
           <h3>{task.title}</h3>
+          <div className="tm-card-label">ЧТО НУЖНО РЕШИТЬ</div>
           <p>{task.card.need || task.card.context || "Описание не заполнено"}</p>
         </div>
-        <ScoreRing score={task.score} />
+        <div className="tm-card-score">
+          <ScoreRing score={task.score} />
+          <span>ГОТОВНОСТЬ</span>
+        </div>
       </div>
       {reason && <div className="tm-reason">✓ {reason}</div>}
       {task.needs_clarification && <div className="tm-warn-sm">Требует уточнения</div>}
@@ -206,31 +212,77 @@ function TaskItem({ task, position, onOpen, reason }: { task: Task; position?: n
 
 function Recommendations({ team, onOpen, version }: { team: Team; onOpen: (id: number) => void; version: number }) {
   const recs = useLoad(() => api.recommendations(team.id), [team.id, version]);
+  const profile = [...new Set([...team.skills, ...team.tech, ...team.interests])];
+
   return (
-    <section>
-      <div className="tm-title">
+    <section className="match-page">
+      <div className="match-hero">
         <div>
-          <span className="section-kicker">ДЛЯ КОМАНДЫ {team.name.toUpperCase()}</span>
-          <h1>Рекомендованные задачи</h1>
+          <span className="section-kicker">GPT MATCH · TEAM INTELLIGENCE</span>
+          <h1>Задачи, которые подходят <span>вашей команде.</span></h1>
           <p className="tm-muted">
-            Подбор по совпадению навыков, интересов и технологий команды с темой задачи. Рекомендуются только открытые задачи
-            с рейтингом от 40. Каталог при этом доступен целиком.
+            GPT сопоставляет профиль команды с открытыми задачами: навыки, технологии, интересы и содержание задачи.
+            Вы сами выбираете, на что откликаться.
           </p>
         </div>
+        <div className="match-hero-score">
+          <span>ПРОФИЛЬ</span>
+          <strong>{profile.length}</strong>
+          <small>сигналов для match</small>
+        </div>
       </div>
-      <div className="tm-profile">
-        {[...team.skills, ...team.tech, ...team.interests].map((s) => (
-          <span key={s}>{s}</span>
-        ))}
+
+      <div className="match-profile">
+        <div>
+          <span className="section-kicker">YOUR TEAM</span>
+          <h3>{team.name}</h3>
+        </div>
+        <div className="tm-profile">
+          {profile.map((s) => <span key={s}>{s}</span>)}
+        </div>
       </div>
+
       {recs.loading && !recs.data && <Loader />}
       {recs.error && <ErrorBox error={recs.error} onRetry={recs.reload} />}
-      {recs.data?.length === 0 && <div className="tm-empty">Подходящих задач пока нет — загляните в общий каталог</div>}
-      <div className="tm-grid">
-        {recs.data?.map((r) => (
-          <TaskItem key={r.task.id} task={r.task} onOpen={onOpen} reason={r.reason} />
-        ))}
-      </div>
+      {recs.data?.length === 0 && (
+        <div className="tm-empty">
+          <strong>Пока нет подходящих задач</strong>
+          <span>Откройте общий каталог — новые challenges появляются там сразу.</span>
+        </div>
+      )}
+
+      {recs.data && recs.data.length > 0 && (
+        <div className="match-grid">
+          {recs.data.map((r, i) => {
+            const signals = [...new Set(r.matched)];
+            const match = Math.min(98, Math.max(62, Math.round(72 + signals.length * 7 + r.task.score / 20)));
+            return (
+              <article className="match-card" key={r.task.id} style={{ "--match-delay": "${i * 70}ms" } as CSSProperties}>
+                <div className="match-card-top">
+                  <span className="match-index">0{i + 1}</span>
+                  <span className="match-label">GPT MATCH</span>
+                  <strong>{match}%</strong>
+                </div>
+                <div className="match-card-body">
+                  <div>
+                    <span className="tm-topic">{r.task.topic}</span>
+                    <h3>{r.task.title}</h3>
+                    <p>{r.reason}</p>
+                  </div>
+                  <ScoreRing score={r.task.score} size={62} />
+                </div>
+                <div className="match-signals">
+                  {signals.slice(0, 5).map((s) => <span key={s}>✓ {s}</span>)}
+                </div>
+                <div className="match-card-foot">
+                  <span>{r.task.proposals_count} откликов · {r.task.owner}</span>
+                  <button onClick={() => onOpen(r.task.id)}>Посмотреть задачу →</button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
