@@ -48,6 +48,8 @@ class Proposal(SQLModel, table=True):
     deadline: str
     link: str
     status: str = "pending"  # pending | accepted | rejected
+    # Число этапов задаётся бизнесом при выборе команды; для старых записей действует максимум.
+    milestone_limit: int | None = Field(default=None)
     # Подтверждённые бизнесом этапы: [{note, points, at}]
     milestones: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=now)

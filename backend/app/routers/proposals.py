@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
-from app.crud import MILESTONE_POINTS, get_task, get_team, proposal_out
+from app.constants import MAX_MILESTONES, MILESTONE_POINTS
+from app.crud import get_task, get_team, proposal_out
 from app.db import get_session
 from app.models import Proposal, now
 from app.schemas import Decision, MilestoneCreate, ProposalOut
@@ -24,6 +25,7 @@ def decide(proposal_id: int, body: Decision, session: Session = Depends(get_sess
         raise HTTPException(409, "Решение по отклику уже принято")
     task = get_task(session, p.task_id)
     p.status = "accepted" if body.decision == "accept" else "rejected"
+    p.milestone_limit = body.milestone_count if body.decision == "accept" else None
     p.decided_at = now()
     # Можно выбрать несколько команд: задача остаётся доступной, пока бизнес её не закроет
     if p.status == "accepted" and task.status == "open":
@@ -43,6 +45,9 @@ def confirm_milestone(proposal_id: int, body: MilestoneCreate, session: Session 
     note = body.note.strip() or "Этап подтверждён"
     if any(m.get("note", "").strip().casefold() == note.casefold() for m in (p.milestones or [])):
         raise HTTPException(409, "Этот этап уже подтверждён")
+    milestone_limit = p.milestone_limit or MAX_MILESTONES
+    if len(p.milestones or []) >= milestone_limit:
+        raise HTTPException(409, f"Достигнут лимит этапов: {milestone_limit}")
     team = get_team(session, p.team_id)
     p.milestones = [*p.milestones, {"note": note, "points": MILESTONE_POINTS, "at": now().isoformat()}]
     team.points += MILESTONE_POINTS

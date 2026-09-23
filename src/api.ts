@@ -149,6 +149,7 @@ export interface Proposal {
   deadline: string;
   link: string;
   status: ProposalStatus;
+  milestone_limit: number | null;
   milestones: { note: string; points: number; at: string }[];
   created_at: string;
   decided_at: string | null;
@@ -271,8 +272,8 @@ export const api = {
   // Отклики и выбор бизнеса
   taskProposals: (taskId: number) => request<Proposal[]>(`/tasks/${taskId}/proposals`),
   createProposal: (taskId: number, body: NewProposal) => post<Proposal>(`/tasks/${taskId}/proposals`, body),
-  decide: (proposalId: number, decision: "accept" | "reject") =>
-    post<Proposal>(`/proposals/${proposalId}/decision`, { decision }),
+  decide: (proposalId: number, decision: { decision: "accept"; milestone_count: number } | { decision: "reject" }) =>
+    post<Proposal>(`/proposals/${proposalId}/decision`, decision),
   milestone: (proposalId: number, note?: string) =>
     post<Proposal>(`/proposals/${proposalId}/milestone`, note ? { note } : {}),
 

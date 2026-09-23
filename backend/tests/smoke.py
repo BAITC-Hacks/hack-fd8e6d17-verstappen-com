@@ -80,8 +80,9 @@ def main() -> int:
     })
     check(s == 201 and prop["status"] == "pending", "6. Команда откликнулась, авто-назначения нет")
 
-    s, dec = call("POST", f"/api/proposals/{prop['id']}/decision", {"decision": "accept"})
+    s, dec = call("POST", f"/api/proposals/{prop['id']}/decision", {"decision": "accept", "milestone_count": 2})
     check(s == 200 and dec["status"] == "accepted", "7. Бизнес вручную выбрал команду")
+    check(dec["milestone_limit"] == 2, "Этапы проекта ограничены планом бизнеса")
     s, _ = call("POST", f"/api/proposals/{prop['id']}/decision", {"decision": "reject"})
     check(s == 409, "7. Повторное решение запрещено (409)")
 

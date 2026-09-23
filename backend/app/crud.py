@@ -14,7 +14,6 @@ from app.schemas import (
 )
 
 RECOMMEND_MIN_SCORE = 40  # ТЗ: рекомендовать можно только с уровня «рабочая»
-MILESTONE_POINTS = 20  # очки команде за подтверждённый бизнесом этап
 
 
 def validate_fields(fields: list[str]) -> list[str]:
@@ -95,6 +94,7 @@ def proposal_out(session: Session, p: Proposal) -> ProposalOut:
         deadline=p.deadline,
         link=p.link,
         status=p.status,
+        milestone_limit=p.milestone_limit,
         milestones=p.milestones,
         created_at=p.created_at,
         decided_at=p.decided_at,

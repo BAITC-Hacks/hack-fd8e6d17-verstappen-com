@@ -2,7 +2,9 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
+
+from app.constants import MAX_MILESTONES
 
 # 10 полей карточки по ТЗ (раздел 3)
 CARD_FIELDS: list[str] = [
@@ -224,6 +226,7 @@ class ProposalOut(BaseModel):
     deadline: str
     link: str
     status: Literal["pending", "accepted", "rejected"]
+    milestone_limit: int | None
     milestones: list[dict]
     created_at: datetime
     decided_at: datetime | None
@@ -231,6 +234,18 @@ class ProposalOut(BaseModel):
 
 class Decision(BaseModel):
     decision: Literal["accept", "reject"]
+    milestone_count: int | None = Field(
+        default=None,
+        ge=1,
+        le=MAX_MILESTONES,
+        description="Обязательное число этапов при выборе команды: от 1 до 10.",
+    )
+
+    @model_validator(mode="after")
+    def require_milestone_count_when_accepting(self):
+        if self.decision == "accept" and self.milestone_count is None:
+            raise ValueError("При выборе команды укажите число этапов от 1 до 10")
+        return self
 
 
 class MilestoneCreate(BaseModel):

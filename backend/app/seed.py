@@ -5,7 +5,8 @@ from pathlib import Path
 
 from sqlmodel import Session, select
 
-from app.crud import MILESTONE_POINTS, rescore
+from app.constants import MAX_MILESTONES, MILESTONE_POINTS
+from app.crud import rescore
 from app.db import drop_db, engine, init_db
 from app.models import Proposal, Task, Team, now
 from app.schemas import CARD_FIELDS
@@ -56,6 +57,7 @@ def seed(session: Session) -> None:
                 deadline=p["deadline"],
                 link=p["link"],
                 status=p["status"],
+                milestone_limit=MAX_MILESTONES if p["status"] == "accepted" else None,
                 milestones=milestones,
                 decided_at=now() if p["status"] != "pending" else None,
             )

@@ -51,8 +51,9 @@ def test_end_to_end(client):
     assert proposal["status"] == "pending"  # никакого автоназначения
 
     # 7. Бизнес вручную выбирает
-    r = client.post(f"/api/proposals/{proposal['id']}/decision", json={"decision": "accept"})
+    r = client.post(f"/api/proposals/{proposal['id']}/decision", json={"decision": "accept", "milestone_count": 2})
     assert r.json()["status"] == "accepted"
+    assert r.json()["milestone_limit"] == 2
     assert client.get(f"/api/tasks/{task['id']}").json()["status"] == "in_progress"
 
     # 8. Подтверждённый этап → очки команде
@@ -128,10 +129,65 @@ def test_validation_errors(client):
 def test_decision_is_final_and_closed_task_rejects_proposals(client):
     p = client.get("/api/tasks/1/proposals").json()[0]
     assert client.post(f"/api/proposals/{p['id']}/decision", json={"decision": "reject"}).status_code == 200
-    assert client.post(f"/api/proposals/{p['id']}/decision", json={"decision": "accept"}).status_code == 409
+    assert client.post(f"/api/proposals/{p['id']}/decision", json={"decision": "accept", "milestone_count": 3}).status_code == 409
     client.post("/api/tasks/1/close")
     r = client.post("/api/tasks/1/proposals", json={"team_id": 2, "idea": "Идея решения задачи", "plan": "План работы команды", "deadline": "1 неделя", "link": "https://a.b"})
     assert r.status_code == 409
+
+
+def test_business_can_set_a_milestone_count_for_each_accepted_proposal(client):
+    task = publish(client, {"title": "Тест этапов", "context": "Контекст задачи для проверки ограничения этапов."}).json()
+    proposal = client.post(
+        f"/api/tasks/{task['id']}/proposals",
+        json={"team_id": 1, "idea": "Реализуем решение задачи", "plan": "Сделаем прототип и проверим", "deadline": "3 недели", "link": "https://github.com/x/y"},
+    ).json()
+    accepted = client.post(
+        f"/api/proposals/{proposal['id']}/decision",
+        json={"decision": "accept", "milestone_count": 2},
+    )
+    assert accepted.status_code == 200
+    assert accepted.json()["milestone_limit"] == 2
+
+    points_before = client.get("/api/teams/1").json()["points"]
+    for number in range(1, 3):
+        response = client.post(f"/api/proposals/{proposal['id']}/milestone", json={"note": f"Этап {number} завершён"})
+        assert response.status_code == 200
+        assert len(response.json()["milestones"]) == number
+
+    rejected = client.post(f"/api/proposals/{proposal['id']}/milestone", json={"note": "Третий этап завершён"})
+    assert rejected.status_code == 409
+    assert rejected.json()["detail"] == "Достигнут лимит этапов: 2"
+    assert client.get("/api/teams/1").json()["points"] == points_before + 40
+
+
+def test_milestone_count_has_a_hard_cap_of_ten(client):
+    proposal = client.get("/api/tasks/1/proposals").json()[0]
+    invalid = client.post(
+        f"/api/proposals/{proposal['id']}/decision",
+        json={"decision": "accept", "milestone_count": 11},
+    )
+    assert invalid.status_code == 422
+    assert proposal["status"] == "pending"
+
+    accepted = client.post(
+        f"/api/proposals/{proposal['id']}/decision",
+        json={"decision": "accept", "milestone_count": 10},
+    )
+    assert accepted.status_code == 200
+    assert accepted.json()["milestone_limit"] == 10
+    for number in range(1, 11):
+        response = client.post(f"/api/proposals/{proposal['id']}/milestone", json={"note": f"Этап {number} завершён"})
+        assert response.status_code == 200
+    rejected = client.post(f"/api/proposals/{proposal['id']}/milestone", json={"note": "Этап 11 завершён"})
+    assert rejected.status_code == 409
+    assert rejected.json()["detail"] == "Достигнут лимит этапов: 10"
+
+
+def test_accepting_a_proposal_requires_a_milestone_count(client):
+    proposal = client.get("/api/tasks/1/proposals").json()[0]
+    response = client.post(f"/api/proposals/{proposal['id']}/decision", json={"decision": "accept"})
+    assert response.status_code == 422
+    assert client.get("/api/tasks/1/proposals").json()[0]["status"] == "pending"
 
 
 def test_grounding_keeps_title_and_context_from_draft():

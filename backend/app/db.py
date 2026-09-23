@@ -2,7 +2,10 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy import inspect, text
+from sqlmodel import Session, SQLModel, create_engine, select
+
+from app.constants import MAX_MILESTONES
 
 # .env читается здесь, чтобы сервер, сброс БД (python -m app.seed) и любые скрипты
 # работали с одной и той же базой. Уже заданные переменные окружения не перезаписываются.
@@ -35,6 +38,24 @@ def init_db() -> None:
     from app import models  # noqa: F401  (регистрирует таблицы)
 
     SQLModel.metadata.create_all(engine)
+    columns = {column["name"] for column in inspect(engine).get_columns("proposal")}
+    if "milestone_limit" not in columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE proposal ADD COLUMN milestone_limit INTEGER"))
+
+    # Старые принятые отклики ещё не хранили плановое число этапов.
+    with Session(engine) as session:
+        legacy_accepted = session.exec(
+            select(models.Proposal).where(
+                models.Proposal.status == "accepted",
+                models.Proposal.milestone_limit.is_(None),
+            )
+        ).all()
+        for proposal in legacy_accepted:
+            proposal.milestone_limit = MAX_MILESTONES
+            session.add(proposal)
+        if legacy_accepted:
+            session.commit()
 
 
 def drop_db() -> None:

@@ -276,6 +276,7 @@ function MyProposals({ team, onOpen, version }: { team: Team; onOpen: (id: numbe
               <a href={p.link} target="_blank" rel="noreferrer">
                 прототип
               </a>
+              {p.status === "accepted" && p.milestone_limit !== null && ` · Этапы: ${p.milestones.length}/${p.milestone_limit}`}
             </small>
             {p.milestones.length > 0 && (
               <ul className="tm-milestones">
